@@ -4,14 +4,24 @@ mod ui;
 
 use clap::Parser;
 
-use crate::{args::Args, error::Result, ui::Ui};
+use crate::{
+  args::Args,
+  error::Result,
+  ui::events::{self, channel::Channel},
+};
 
 fn main() -> Result<()> {
-  stable_eyre::install()?;
-
   let _args = Args::parse();
 
-  Ui::new()?.run()?;
+  stable_eyre::install()?;
+
+  let event_channel = Channel::new();
+  let result_channel = Channel::new();
+
+  events::spawn(event_channel.sender.clone(), result_channel.sender.clone());
+  ui::spawn(event_channel, result_channel.sender.clone());
+
+  result_channel.poll()??;
 
   Ok(())
 }
