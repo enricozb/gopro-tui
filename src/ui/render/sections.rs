@@ -9,7 +9,7 @@ use tui::{
   Frame,
 };
 
-use super::super::state::State;
+use super::super::state::{focus::Focus, State};
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
   Sections::new(frame.size(), state).render(frame);
@@ -51,18 +51,21 @@ impl<'a> Sections<'a> {
   }
 
   fn sessions(&self) -> Table {
-    let title = match &self.state.src_dir {
-      Some(dir) => format!("Sessions - {}", dir),
-      None => "Sessions".to_string(),
-    };
-
-    let title = Spans::from(vec![Span::styled(title, Style::default().fg(Color::Blue))]);
+    let (title, border_style) = border_style(
+      vec![Some("Sessions"), self.state.src_dir.as_deref()],
+      self.state.focus == Focus::Sessions,
+    );
 
     Table::new([])
       .header(
         Row::new(vec!["date", "files", "size", "output"]).style(Style::default().add_modifier(Modifier::UNDERLINED)),
       )
-      .block(Block::default().title(title).borders(Borders::ALL))
+      .block(
+        Block::default()
+          .title(title)
+          .borders(Borders::ALL)
+          .border_style(border_style),
+      )
       .widths(&[
         Constraint::Length(11),
         Constraint::Length(6),
@@ -72,10 +75,15 @@ impl<'a> Sections<'a> {
   }
 
   fn files(&self) -> Table {
-    let title = Spans::from(vec![Span::styled("Files", Style::default().fg(Color::Blue))]);
+    let (title, border_style) = border_style(vec![Some("Files")], self.state.focus == Focus::Files);
 
     Table::new([])
-      .block(Block::default().title(title).borders(Borders::ALL))
+      .block(
+        Block::default()
+          .title(title)
+          .borders(Borders::ALL)
+          .border_style(border_style),
+      )
       .widths(&[
         Constraint::Length(12),
         Constraint::Length(10),
@@ -91,5 +99,21 @@ impl<'a> Sections<'a> {
     };
 
     Block::default().title(title).borders(Borders::ALL)
+  }
+}
+
+fn border_style<'a>(title: Vec<Option<&'a str>>, focused: bool) -> (Spans<'a>, Style) {
+  let style = Style::default().fg(Color::Blue);
+  let spans = Spans::from(
+    title
+      .iter()
+      .filter_map(|s| s.map(|s| Span::styled(s, style)))
+      .collect::<Vec<Span<'_>>>(),
+  );
+
+  if focused {
+    (spans, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
+  } else {
+    (spans, Style::default())
   }
 }

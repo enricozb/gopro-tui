@@ -18,7 +18,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 use self::{events::Event, render::sections, state::State};
 use crate::{channel::Channel, error::Result};
 
-struct Ui {
+pub struct Ui {
   event_channel: Channel<Event>,
   state: State,
   terminal: Terminal<CrosstermBackend<Stdout>>,
@@ -41,6 +41,10 @@ impl Ui {
 
       match self.event_channel.poll()? {
         Event::Key { code: Char('q'), .. } => break,
+
+        Event::Key {
+          code: Char('k' | 'j'), ..
+        } => self.state.toggle_focus(),
 
         _ => (),
       }

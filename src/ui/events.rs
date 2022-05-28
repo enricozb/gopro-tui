@@ -4,6 +4,7 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModi
 
 use crate::error::Result;
 
+#[derive(Debug)]
 pub enum Event {
   Key { code: KeyCode, modifiers: KeyModifiers },
   Error(String),
@@ -26,7 +27,7 @@ fn key_event_loop(event_sender: &Sender<Event>) -> Result<()> {
 static TICK_RATE: Duration = Duration::from_millis(200);
 
 fn event_tick() -> Result<Event> {
-  let event = if !event::poll(TICK_RATE)? {
+  let event = if event::poll(TICK_RATE)? {
     match event::read()? {
       CrosstermEvent::Key(KeyEvent { code, modifiers }) => Event::Key { code, modifiers },
       _ => Event::Tick,
