@@ -5,9 +5,9 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[clap(version)]
 pub struct Args {
-  /// Directory containing input files
-  pub input_dir: PathBuf,
+  /// Source directory for gopro files
+  pub src_dir: PathBuf,
 
-  /// Directory containing categorized files
-  pub output_dir: PathBuf,
+  /// Destination directory for categorized files
+  pub dst_dir: PathBuf,
 }
