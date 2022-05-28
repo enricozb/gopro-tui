@@ -1,5 +1,3 @@
-pub mod channel;
-
 use std::{sync::mpsc::Sender, thread, time::Duration};
 
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};

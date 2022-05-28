@@ -15,11 +15,8 @@ use crossterm::{
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
-use self::{
-  events::{channel::Channel, Event},
-  state::State,
-};
-use crate::error::Result;
+use self::{events::Event, state::State};
+use crate::{channel::Channel, error::Result};
 
 struct Ui {
   event_channel: Channel<Event>,

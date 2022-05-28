@@ -1,14 +1,11 @@
 mod args;
+mod channel;
 mod error;
 mod ui;
 
 use clap::Parser;
 
-use crate::{
-  args::Args,
-  error::Result,
-  ui::events::{self, channel::Channel},
-};
+use crate::{args::Args, channel::Channel, error::Result, ui::events};
 
 fn main() -> Result<()> {
   let _args = Args::parse();
@@ -18,8 +15,8 @@ fn main() -> Result<()> {
   let event_channel = Channel::new();
   let result_channel = Channel::new();
 
-  events::spawn(event_channel.sender.clone(), result_channel.sender.clone());
-  ui::spawn(event_channel, result_channel.sender.clone());
+  events::spawn(event_channel.sender(), result_channel.sender());
+  ui::spawn(event_channel, result_channel.sender());
 
   result_channel.poll()??;
 
