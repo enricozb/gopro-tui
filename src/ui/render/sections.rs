@@ -52,7 +52,7 @@ impl<'a> Sections<'a> {
 
   fn sessions(&self) -> Table {
     let (title, border_style) = border_style(
-      vec![Some("Sessions"), self.state.src_dir.as_deref()],
+      &[Some("Sessions"), self.state.src_dir.as_deref()],
       self.state.focus == Focus::Sessions,
     );
 
@@ -75,7 +75,7 @@ impl<'a> Sections<'a> {
   }
 
   fn files(&self) -> Table {
-    let (title, border_style) = border_style(vec![Some("Files")], self.state.focus == Focus::Files);
+    let (title, border_style) = border_style(&[Some("Files")], self.state.focus == Focus::Files);
 
     Table::new([])
       .block(
@@ -102,7 +102,7 @@ impl<'a> Sections<'a> {
   }
 }
 
-fn border_style<'a>(title: Vec<Option<&'a str>>, focused: bool) -> (Spans<'a>, Style) {
+fn border_style<'a>(title: &[Option<&'a str>], focused: bool) -> (Spans<'a>, Style) {
   let style = Style::default().fg(Color::Blue);
   let spans = Spans::from(
     title

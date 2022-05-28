@@ -34,7 +34,7 @@ impl Ui {
   }
 
   pub fn run(&mut self) -> Result<()> {
-    self.setup()?;
+    Self::setup()?;
 
     loop {
       self.render()?;
@@ -43,7 +43,7 @@ impl Ui {
         Event::Key { code: Char('q'), .. } => break,
 
         Event::Key {
-          code: Char('k' | 'j'), ..
+          code: Char('h' | 'l'), ..
         } => self.state.toggle_focus(),
 
         _ => (),
@@ -53,7 +53,7 @@ impl Ui {
     Ok(())
   }
 
-  fn setup(&self) -> Result<()> {
+  fn setup() -> Result<()> {
     enable_raw_mode()?;
     execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
 
@@ -86,5 +86,5 @@ pub fn spawn(event_channel: Channel<Event>, result_sender: Sender<Result<()>>) {
 }
 
 fn run(event_channel: Channel<Event>) -> Result<()> {
-  Ok(Ui::new(event_channel)?.run()?)
+  Ui::new(event_channel)?.run()
 }
