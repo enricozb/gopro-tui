@@ -15,7 +15,7 @@ use crossterm::{
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
-use self::{events::Event, state::State};
+use self::{events::Event, render::sections, state::State};
 use crate::{channel::Channel, error::Result};
 
 struct Ui {
@@ -57,7 +57,7 @@ impl Ui {
   }
 
   fn render(&mut self) -> Result<()> {
-    self.terminal.draw(|f| render::render(f, &self.state))?;
+    self.terminal.draw(|f| sections::render(f, &self.state))?;
 
     Ok(())
   }
