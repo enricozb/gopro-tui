@@ -24,15 +24,12 @@ pub struct State {
 }
 
 impl State {
-  pub fn toggle_focus(&mut self) {
-    self.focus = match self.focus {
-      Focus::Files => Focus::Sessions,
-      Focus::Sessions => Focus::Files,
-    }
-  }
-
   pub fn session(&self) -> Option<&Session> {
     self.sessions.iter().nth(self.sessions_idx).map(|e| e.1)
+  }
+
+  pub fn files_len(&self) -> usize {
+    self.session().map_or(0, |session| session.files.len())
   }
 
   pub fn add_file(&mut self, file: File) {
@@ -50,5 +47,61 @@ impl State {
         );
       }
     }
+  }
+
+  pub fn toggle_focus(&mut self) {
+    self.focus = match self.focus {
+      Focus::Files => Focus::Sessions,
+      Focus::Sessions => Focus::Files,
+    }
+  }
+
+  pub fn list_up(&mut self) {
+    match self.focus {
+      Focus::Files => self.files_idx_dec(),
+      Focus::Sessions => self.sessions_idx_dec(),
+    };
+
+    self.clamp_idxs();
+  }
+
+  pub fn list_down(&mut self) {
+    match self.focus {
+      Focus::Files => self.files_idx_inc(),
+      Focus::Sessions => self.sessions_idx_inc(),
+    };
+
+    self.clamp_idxs();
+  }
+
+  pub fn clamp_idxs(&mut self) {
+    self.files_idx = clamp(0, self.files_idx, self.files_len() - 1);
+    self.sessions_idx = clamp(0, self.sessions_idx, self.sessions.len() - 1);
+  }
+
+  pub fn files_idx_inc(&mut self) {
+    self.files_idx = clamp(0, self.files_idx.saturating_add(1), self.files_len() - 1);
+  }
+
+  pub fn files_idx_dec(&mut self) {
+    self.files_idx = clamp(0, self.files_idx.saturating_sub(1), self.files_len() - 1);
+  }
+
+  pub fn sessions_idx_inc(&mut self) {
+    self.sessions_idx = clamp(0, self.sessions_idx.saturating_add(1), self.sessions.len() - 1);
+  }
+
+  pub fn sessions_idx_dec(&mut self) {
+    self.sessions_idx = clamp(0, self.sessions_idx.saturating_sub(1), self.sessions.len() - 1);
+  }
+}
+
+fn clamp(min: usize, x: usize, max: usize) -> usize {
+  if x < min {
+    min
+  } else if x > max {
+    max
+  } else {
+    x
   }
 }

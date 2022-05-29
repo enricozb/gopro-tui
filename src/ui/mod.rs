@@ -41,6 +41,8 @@ impl Ui {
 
       match self.event_channel.poll()? {
         Event::Key { code: Char('q'), .. } => break,
+        Event::Key { code: Char('k'), .. } => self.state.list_up(),
+        Event::Key { code: Char('j'), .. } => self.state.list_down(),
         Event::Key {
           code: Char('h' | 'l'), ..
         } => self.state.toggle_focus(),
