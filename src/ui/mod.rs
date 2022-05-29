@@ -21,7 +21,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 use self::{
   events::Event,
   render::sections,
-  state::{focus::Focus, session::File, Popup, State},
+  state::{focus::Focus, Popup, State},
 };
 use crate::{
   cache::CacheEntry,
@@ -72,19 +72,7 @@ impl Ui {
 
         (_, Popup::Input, Event::Key { code: Enter, .. }) => {
           self.state.write_note();
-          if let Some(File {
-            path, note: Some(note), ..
-          }) = self.state.file()
-          {
-            self.cache.notes.insert(
-              path
-                .file_name()
-                .ok_or_else(|| eyre!("file has no basename: {}", path.display()))?
-                .to_string_lossy()
-                .to_string(),
-              note.clone(),
-            );
-          };
+          self.update_file_cache()?;
         }
 
         (_, _, Event::Key { code: Esc, .. }) => self.state.escape(),
@@ -101,6 +89,26 @@ impl Ui {
         _ => (),
       }
     }
+
+    Ok(())
+  }
+
+  fn update_file_cache(&mut self) -> Result<()> {
+    if let Some(file) = self.state.file() {
+      if let Some(note) = &file.note {
+        self.cache.notes.insert(
+          file
+            .path
+            .file_name()
+            .ok_or_else(|| eyre!("file has no basename: {}", file.path.display()))?
+            .to_string_lossy()
+            .to_string(),
+          note.clone(),
+        );
+
+        self.cache.save()?;
+      };
+    };
 
     Ok(())
   }
