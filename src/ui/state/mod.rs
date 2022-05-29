@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 
 use chrono::naive::NaiveDate;
 
-use self::{focus::Focus, session::Session};
+use self::{
+  focus::Focus,
+  session::{File, Session},
+};
 
 #[derive(Default)]
 pub struct State {
@@ -30,5 +33,22 @@ impl State {
 
   pub fn session(&self) -> Option<&Session> {
     self.sessions.iter().nth(self.sessions_idx).map(|e| e.1)
+  }
+
+  pub fn add_file(&mut self, file: File) {
+    let date = file.datetime.naive_local().date();
+
+    match self.sessions.get_mut(&date) {
+      Some(session) => session.files.push(file),
+      None => {
+        self.sessions.insert(
+          date,
+          Session {
+            date,
+            files: vec![file],
+          },
+        );
+      }
+    }
   }
 }

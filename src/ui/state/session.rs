@@ -15,3 +15,16 @@ pub struct File {
 
   pub note: Option<String>,
 }
+
+impl File {
+  pub fn new(path: PathBuf, metadata: Metadata, datetime: DateTime<FixedOffset>, seconds: f64) -> Self {
+    Self {
+      path,
+      metadata,
+      datetime,
+      seconds,
+
+      note: None,
+    }
+  }
+}

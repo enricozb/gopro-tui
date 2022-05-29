@@ -1,6 +1,6 @@
 pub mod events;
 mod render;
-mod state;
+pub mod state;
 
 use std::{
   io::{self, Stdout},
@@ -41,10 +41,11 @@ impl Ui {
 
       match self.event_channel.poll()? {
         Event::Key { code: Char('q'), .. } => break,
-
         Event::Key {
           code: Char('h' | 'l'), ..
         } => self.state.toggle_focus(),
+
+        Event::File(file) => self.state.add_file(file),
 
         _ => (),
       }
