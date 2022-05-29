@@ -2,7 +2,10 @@ use std::{sync::mpsc::Sender, thread, time::Duration};
 
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 
-use crate::error::Result;
+use crate::{
+  channel::{EventChannel, ResultChannel},
+  error::Result,
+};
 
 #[derive(Debug)]
 pub enum Event {
@@ -11,7 +14,10 @@ pub enum Event {
   Tick,
 }
 
-pub fn spawn(event_sender: Sender<Event>, result_sender: Sender<Result<()>>) {
+pub fn spawn(event_channel: &EventChannel, result_channel: &ResultChannel) {
+  let event_sender = event_channel.sender();
+  let result_sender = result_channel.sender();
+
   thread::spawn(move || result_sender.send(key_event_loop(&event_sender)));
 }
 

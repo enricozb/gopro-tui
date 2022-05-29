@@ -16,16 +16,16 @@ use crossterm::{
 use tui::{backend::CrosstermBackend, Terminal};
 
 use self::{events::Event, render::sections, state::State};
-use crate::{channel::Channel, error::Result};
+use crate::{channel::EventChannel, error::Result};
 
 pub struct Ui {
-  event_channel: Channel<Event>,
+  event_channel: EventChannel,
   state: State,
   terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
 impl Ui {
-  pub fn new(event_channel: Channel<Event>) -> Result<Self> {
+  pub fn new(event_channel: EventChannel) -> Result<Self> {
     Ok(Self {
       event_channel,
       state: State::default(),
@@ -81,10 +81,10 @@ impl Drop for Ui {
   }
 }
 
-pub fn spawn(event_channel: Channel<Event>, result_sender: Sender<Result<()>>) {
+pub fn spawn(event_channel: EventChannel, result_sender: Sender<Result<()>>) {
   thread::spawn(move || result_sender.send(run(event_channel)).unwrap());
 }
 
-fn run(event_channel: Channel<Event>) -> Result<()> {
+fn run(event_channel: EventChannel) -> Result<()> {
   Ui::new(event_channel)?.run()
 }

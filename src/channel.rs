@@ -1,6 +1,12 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 
-use crate::error::Result;
+use crate::{error::Result, ui::events::Event};
+
+// A channel for sending UI `Event`s.
+pub type EventChannel = Channel<Event>;
+
+// A channel for sending `Result<()>`s.`
+pub type ResultChannel = Channel<Result<()>>;
 
 pub struct Channel<T> {
   pub sender: Sender<T>,

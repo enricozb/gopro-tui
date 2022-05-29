@@ -1,21 +1,29 @@
 mod args;
 mod channel;
 mod error;
+mod importer;
 mod ui;
 
 use clap::Parser;
 
-use crate::{args::Args, channel::Channel, error::Result, ui::events};
+use crate::{
+  args::Args,
+  channel::{EventChannel, ResultChannel},
+  error::Result,
+  ui::events,
+};
 
 fn main() -> Result<()> {
-  let _args = Args::parse();
+  let args = Args::parse();
 
   stable_eyre::install()?;
 
-  let event_channel = Channel::new();
-  let result_channel = Channel::new();
+  let event_channel = EventChannel::new();
+  let result_channel = ResultChannel::new();
 
-  events::spawn(event_channel.sender(), result_channel.sender());
+  events::spawn(&event_channel, &result_channel);
+  importer::spawn(args.src_dir, &event_channel, &result_channel);
+
   ui::spawn(event_channel, result_channel.sender());
 
   result_channel.poll()??;
