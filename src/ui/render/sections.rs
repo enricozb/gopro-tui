@@ -5,7 +5,7 @@ use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Block, Borders, Row, Table},
+  widgets::{Block, Borders, Row, Table, TableState},
   Frame,
 };
 
@@ -48,8 +48,8 @@ impl<'a> Sections<'a> {
   }
 
   pub fn render(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
-    frame.render_widget(self.sessions(), self.sessions);
-    frame.render_widget(self.files(), self.files);
+    frame.render_stateful_widget(self.sessions(), self.sessions, &mut self.sessions_state());
+    frame.render_stateful_widget(self.files(), self.files, &mut self.files_state());
     frame.render_widget(self.outputs(), self.outputs);
   }
 
@@ -102,6 +102,20 @@ impl<'a> Sections<'a> {
     };
 
     Block::default().title(title).borders(Borders::ALL)
+  }
+
+  fn sessions_state(&self) -> TableState {
+    let mut sessions_state = TableState::default();
+    sessions_state.select(Some(self.state.sessions_idx));
+
+    sessions_state
+  }
+
+  fn files_state(&self) -> TableState {
+    let mut files_state = TableState::default();
+    files_state.select(Some(self.state.files_idx));
+
+    files_state
   }
 }
 
