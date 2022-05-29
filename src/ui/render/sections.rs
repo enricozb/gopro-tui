@@ -23,6 +23,7 @@ struct Sections<'a> {
   files: Rect,
   outputs: Rect,
 
+  input: Rect,
   popup: Rect,
 
   state: &'a State,
@@ -45,6 +46,7 @@ impl<'a> Sections<'a> {
       files: left[1],
       outputs: layout[1],
 
+      input: Sections::input_rect(frame),
       popup: Sections::popup_rect(frame),
 
       state,
@@ -60,6 +62,11 @@ impl<'a> Sections<'a> {
       frame.render_widget(Clear, self.popup);
       frame.render_widget(self.popup(error.clone()), self.popup);
     }
+
+    if let Some(input) = &self.state.input {
+      frame.render_widget(Clear, self.input);
+      frame.render_widget(self.input(input.clone()), self.input);
+    }
   }
 
   fn sessions(&self) -> Table {
@@ -69,15 +76,8 @@ impl<'a> Sections<'a> {
     );
 
     Table::new(rows::sessions(self.state))
-      .header(
-        Row::new(vec!["date", "files", "size", "output"]).style(Style::default().add_modifier(Modifier::UNDERLINED)),
-      )
-      .block(
-        Block::default()
-          .title(title)
-          .borders(Borders::ALL)
-          .border_style(border_style),
-      )
+      .header(Row::new(vec!["date", "files", "size", "output"]).style(Style::default().add_modifier(Modifier::UNDERLINED)))
+      .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(11),
         Constraint::Length(6),
@@ -90,12 +90,7 @@ impl<'a> Sections<'a> {
     let (title, border_style) = border_style(&[Some("Files")], self.state.focus == Focus::Files);
 
     Table::new(rows::files(self.state))
-      .block(
-        Block::default()
-          .title(title)
-          .borders(Borders::ALL)
-          .border_style(border_style),
-      )
+      .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(12),
         Constraint::Length(10),
@@ -111,6 +106,17 @@ impl<'a> Sections<'a> {
     };
 
     Block::default().title(title).borders(Borders::ALL)
+  }
+
+  fn input(&self, input: String) -> Paragraph {
+    Paragraph::new(Span::raw(input))
+      .block(
+        Block::default()
+          .title("Note")
+          .borders(Borders::ALL)
+          .border_style(Style::default().fg(Color::Green)),
+      )
+      .style(Style::default().fg(Color::White))
   }
 
   fn popup(&self, error: String) -> Paragraph {
@@ -134,29 +140,26 @@ impl<'a> Sections<'a> {
     files_state
   }
 
+  fn input_rect(frame: Rect) -> Rect {
+    let (width, height) = (50, 3);
+
+    Rect {
+      x: frame.width / 2 - width / 2,
+      y: frame.height / 2 - height / 2,
+      width,
+      height,
+    }
+  }
+
   fn popup_rect(frame: Rect) -> Rect {
     let popup_layout = Layout::default()
       .direction(Direction::Vertical)
-      .constraints(
-        [
-          Constraint::Percentage(30),
-          Constraint::Percentage(40),
-          Constraint::Percentage(30),
-        ]
-        .as_ref(),
-      )
+      .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)].as_ref())
       .split(frame);
 
     Layout::default()
       .direction(Direction::Horizontal)
-      .constraints(
-        [
-          Constraint::Percentage(20),
-          Constraint::Percentage(60),
-          Constraint::Percentage(20),
-        ]
-        .as_ref(),
-      )
+      .constraints([Constraint::Percentage(20), Constraint::Percentage(60), Constraint::Percentage(20)].as_ref())
       .split(popup_layout[1])[1]
   }
 }

@@ -11,14 +11,18 @@ use std::{
 use crossterm::{
   event::{
     DisableMouseCapture, EnableMouseCapture,
-    KeyCode::{Char, Enter, Esc},
+    KeyCode::{Backspace, Char, Enter, Esc},
   },
   execute,
   terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tui::{backend::CrosstermBackend, Terminal};
 
-use self::{events::Event, render::sections, state::State};
+use self::{
+  events::Event,
+  render::sections,
+  state::{Popup, State},
+};
 use crate::{channel::EventChannel, error::Result};
 
 pub struct Ui {
@@ -42,24 +46,30 @@ impl Ui {
     loop {
       self.render()?;
 
-      match self.event_channel.poll()? {
-        Event::Key { code: Char('q'), .. } => break,
-        Event::Key { code: Char('k'), .. } => self.state.list_up(),
-        Event::Key { code: Char('j'), .. } => self.state.list_down(),
-        Event::Key {
-          code: Char('h' | 'l'), ..
-        } => self.state.toggle_focus(),
+      match (&self.state.popup(), self.event_channel.poll()?) {
+        (Popup::Input, Event::Key { code: Char(c), .. }) => self.state.input_char(c),
+        (Popup::Input, Event::Key { code: Backspace, .. }) => self.state.input_del(),
 
-        Event::Key { code: Enter, .. } => {
+        (Popup::None, Event::Key { code: Char('q'), .. }) => break,
+
+        (Popup::None, Event::Key { code: Char('k'), .. }) => self.state.list_up(),
+        (Popup::None, Event::Key { code: Char('j'), .. }) => self.state.list_down(),
+        (Popup::None, Event::Key { code: Char('h' | 'l'), .. }) => self.state.toggle_focus(),
+
+        (Popup::None, Event::Key { code: Char('n'), .. }) => self.state.input(),
+
+        (Popup::None, Event::Key { code: Enter, .. }) => {
           if let Err(error) = self.state.enter() {
             self.event_channel.sender.send(Event::Error(format!("{:?}", error)))?;
           }
         }
 
-        Event::Key { code: Esc, .. } => self.state.escape(),
+        (Popup::Input, Event::Key { code: Enter, .. }) => self.state.write_note(),
 
-        Event::File(file) => self.state.add_file(*file),
-        Event::Error(error) => self.state.error(error),
+        (_, Event::Key { code: Esc, .. }) => self.state.escape(),
+
+        (_, Event::File(file)) => self.state.add_file(*file),
+        (_, Event::Error(error)) => self.state.error(error),
 
         _ => (),
       }

@@ -17,6 +17,7 @@ pub struct State {
   pub dst_dir: Option<String>,
 
   pub focus: Focus,
+  pub input: Option<String>,
   pub error: Option<String>,
 
   pub sessions: BTreeMap<NaiveDate, Session>,
@@ -38,20 +39,38 @@ impl State {
     self.session().map_or(0, |session| session.files.len())
   }
 
+  pub fn popup(&self) -> Popup {
+    match (&self.input, &self.error) {
+      (Some(_), None) => Popup::Input,
+      (None, Some(_)) => Popup::Error,
+      _ => Popup::None,
+    }
+  }
+
   pub fn add_file(&mut self, file: File) {
     let date = file.datetime.naive_local().date();
 
     match self.sessions.get_mut(&date) {
       Some(session) => session.files.push(file),
       None => {
-        self.sessions.insert(
-          date,
-          Session {
-            date,
-            files: vec![file],
-          },
-        );
+        self.sessions.insert(date, Session { date, files: vec![file] });
       }
+    }
+  }
+
+  pub fn input(&mut self) {
+    self.input = self.file().and_then(|f| f.note.clone()).or_else(|| Some("".to_string()))
+  }
+
+  pub fn input_char(&mut self, c: char) {
+    if let Some(s) = self.input.as_mut() {
+      s.push(c)
+    }
+  }
+
+  pub fn input_del(&mut self) {
+    if let Some(s) = self.input.as_mut() {
+      s.pop();
     }
   }
 
@@ -75,7 +94,8 @@ impl State {
   }
 
   pub fn escape(&mut self) {
-    self.error = None
+    self.input = None;
+    self.error = None;
   }
 
   pub fn list_up(&mut self) {
@@ -116,6 +136,22 @@ impl State {
   pub fn sessions_idx_dec(&mut self) {
     self.sessions_idx = clamp(0, self.sessions_idx.saturating_sub(1), self.sessions.len() - 1);
   }
+
+  pub fn write_note(&mut self) {
+    if let Some(input) = &self.input {
+      if let Some((_, ref mut session)) = self.sessions.iter_mut().nth(self.sessions_idx) {
+        session.files[self.files_idx].note = Some(input.clone());
+      };
+    };
+
+    self.input = None
+  }
+}
+
+pub enum Popup {
+  None,
+  Input,
+  Error,
 }
 
 fn clamp(min: usize, x: usize, max: usize) -> usize {
