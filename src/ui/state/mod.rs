@@ -17,6 +17,7 @@ pub struct State {
   pub dst_dir: Option<String>,
 
   pub focus: Focus,
+  pub error: Option<String>,
 
   pub sessions: BTreeMap<NaiveDate, Session>,
 
@@ -54,6 +55,10 @@ impl State {
     }
   }
 
+  pub fn error(&mut self, error: String) {
+    self.error = Some(error)
+  }
+
   pub fn toggle_focus(&mut self) {
     self.focus = match self.focus {
       Focus::Files => Focus::Sessions,
@@ -67,6 +72,10 @@ impl State {
     };
 
     Ok(())
+  }
+
+  pub fn escape(&mut self) {
+    self.error = None
   }
 
   pub fn list_up(&mut self) {

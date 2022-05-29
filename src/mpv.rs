@@ -1,5 +1,7 @@
 use std::process::{Command, Stdio};
 
+use stable_eyre::eyre::WrapErr;
+
 use crate::{error::Result, ui::state::session::File};
 
 pub fn preview(file: &File) -> Result<()> {
@@ -8,7 +10,8 @@ pub fn preview(file: &File) -> Result<()> {
     .stdin(Stdio::null())
     .stdout(Stdio::null())
     .stderr(Stdio::null())
-    .spawn()?;
+    .spawn()
+    .wrap_err("mpv not found")?;
 
   Ok(())
 }

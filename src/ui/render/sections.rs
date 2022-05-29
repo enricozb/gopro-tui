@@ -5,7 +5,7 @@ use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Block, Borders, Row, Table, TableState},
+  widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState, Wrap},
   Frame,
 };
 
@@ -22,6 +22,8 @@ struct Sections<'a> {
   sessions: Rect,
   files: Rect,
   outputs: Rect,
+
+  popup: Rect,
 
   state: &'a State,
 }
@@ -43,6 +45,8 @@ impl<'a> Sections<'a> {
       files: left[1],
       outputs: layout[1],
 
+      popup: Sections::popup_rect(frame),
+
       state,
     }
   }
@@ -51,6 +55,11 @@ impl<'a> Sections<'a> {
     frame.render_stateful_widget(self.sessions(), self.sessions, &mut self.sessions_state());
     frame.render_stateful_widget(self.files(), self.files, &mut self.files_state());
     frame.render_widget(self.outputs(), self.outputs);
+
+    if let Some(error) = &self.state.error {
+      frame.render_widget(Clear, self.popup);
+      frame.render_widget(self.popup(error.clone()), self.popup);
+    }
   }
 
   fn sessions(&self) -> Table {
@@ -104,6 +113,13 @@ impl<'a> Sections<'a> {
     Block::default().title(title).borders(Borders::ALL)
   }
 
+  fn popup(&self, error: String) -> Paragraph {
+    Paragraph::new(error)
+      .block(Block::default().title("Error").borders(Borders::ALL))
+      .style(Style::default().fg(Color::Red))
+      .wrap(Wrap { trim: true })
+  }
+
   fn sessions_state(&self) -> TableState {
     let mut sessions_state = TableState::default();
     sessions_state.select(Some(self.state.sessions_idx));
@@ -116,6 +132,32 @@ impl<'a> Sections<'a> {
     files_state.select(Some(self.state.files_idx));
 
     files_state
+  }
+
+  fn popup_rect(frame: Rect) -> Rect {
+    let popup_layout = Layout::default()
+      .direction(Direction::Vertical)
+      .constraints(
+        [
+          Constraint::Percentage(30),
+          Constraint::Percentage(40),
+          Constraint::Percentage(30),
+        ]
+        .as_ref(),
+      )
+      .split(frame);
+
+    Layout::default()
+      .direction(Direction::Horizontal)
+      .constraints(
+        [
+          Constraint::Percentage(20),
+          Constraint::Percentage(60),
+          Constraint::Percentage(20),
+        ]
+        .as_ref(),
+      )
+      .split(popup_layout[1])[1]
   }
 }
 
