@@ -4,7 +4,6 @@ pub mod state;
 
 use std::{
   io::{self, Stdout},
-  sync::mpsc::Sender,
   thread,
 };
 
@@ -16,24 +15,31 @@ use crossterm::{
   execute,
   terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use stable_eyre::eyre::eyre;
 use tui::{backend::CrosstermBackend, Terminal};
 
 use self::{
   events::Event,
   render::sections,
-  state::{focus::Focus, Popup, State},
+  state::{focus::Focus, session::File, Popup, State},
 };
-use crate::{channel::EventChannel, error::Result};
+use crate::{
+  cache::CacheEntry,
+  channel::{EventChannel, ResultChannel},
+  error::Result,
+};
 
 pub struct Ui {
+  cache: CacheEntry,
   event_channel: EventChannel,
   state: State,
   terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
 impl Ui {
-  pub fn new(event_channel: EventChannel) -> Result<Self> {
+  pub fn new(cache: CacheEntry, event_channel: EventChannel) -> Result<Self> {
     Ok(Self {
+      cache,
       event_channel,
       state: State::default(),
       terminal: Terminal::new(CrosstermBackend::new(io::stdout()))?,
@@ -64,11 +70,32 @@ impl Ui {
           }
         }
 
-        (_, Popup::Input, Event::Key { code: Enter, .. }) => self.state.write_note(),
+        (_, Popup::Input, Event::Key { code: Enter, .. }) => {
+          self.state.write_note();
+          if let Some(File {
+            path, note: Some(note), ..
+          }) = self.state.file()
+          {
+            self.cache.notes.insert(
+              path
+                .file_name()
+                .ok_or_else(|| eyre!("file has no basename: {}", path.display()))?
+                .to_string_lossy()
+                .to_string(),
+              note.clone(),
+            );
+          };
+        }
 
         (_, _, Event::Key { code: Esc, .. }) => self.state.escape(),
 
-        (_, _, Event::File(file)) => self.state.add_file(*file),
+        (_, _, Event::File(mut file)) => {
+          if let Some(file_name) = file.path.file_name() {
+            file.note = self.cache.notes.get(&file_name.to_string_lossy().into_owned()).cloned()
+          }
+
+          self.state.add_file(*file)
+        }
         (_, _, Event::Error(error)) => self.state.error(error),
 
         _ => (),
@@ -92,6 +119,8 @@ impl Ui {
   }
 
   fn cleanup(&mut self) -> Result<()> {
+    self.cache.save()?;
+
     disable_raw_mode()?;
     execute!(self.terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     self.terminal.show_cursor()?;
@@ -106,10 +135,12 @@ impl Drop for Ui {
   }
 }
 
-pub fn spawn(event_channel: EventChannel, result_sender: Sender<Result<()>>) {
-  thread::spawn(move || result_sender.send(run(event_channel)).unwrap());
+pub fn spawn(event_channel: EventChannel, result_channel: &ResultChannel, cache: CacheEntry) {
+  let result_sender = result_channel.sender();
+
+  thread::spawn(move || result_sender.send(run(cache, event_channel)).unwrap());
 }
 
-fn run(event_channel: EventChannel) -> Result<()> {
-  Ui::new(event_channel)?.run()
+fn run(cache: CacheEntry, event_channel: EventChannel) -> Result<()> {
+  Ui::new(cache, event_channel)?.run()
 }

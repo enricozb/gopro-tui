@@ -54,6 +54,8 @@ impl<'a> Sections<'a> {
   }
 
   pub fn render(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
+    frame.render_widget(Clear, frame.size());
+
     frame.render_stateful_widget(self.sessions(), self.sessions, &mut self.sessions_state());
     frame.render_stateful_widget(self.files(), self.files, &mut self.files_state());
     frame.render_widget(self.outputs(), self.outputs);

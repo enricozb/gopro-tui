@@ -31,7 +31,7 @@ fn key_event_loop(event_sender: &Sender<Event>) -> Result<()> {
   }
 }
 
-static TICK_RATE: Duration = Duration::from_millis(200);
+const TICK_RATE: Duration = Duration::from_millis(200);
 
 fn event_tick() -> Result<Event> {
   let event = if event::poll(TICK_RATE)? {
