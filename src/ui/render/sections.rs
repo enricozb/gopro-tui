@@ -9,7 +9,10 @@ use tui::{
   Frame,
 };
 
-use super::super::state::{focus::Focus, State};
+use super::{
+  super::state::{focus::Focus, State},
+  rows,
+};
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
   Sections::new(frame.size(), state).render(frame);
@@ -56,7 +59,7 @@ impl<'a> Sections<'a> {
       self.state.focus == Focus::Sessions,
     );
 
-    Table::new([])
+    Table::new(rows::sessions(self.state))
       .header(
         Row::new(vec!["date", "files", "size", "output"]).style(Style::default().add_modifier(Modifier::UNDERLINED)),
       )
@@ -77,7 +80,7 @@ impl<'a> Sections<'a> {
   fn files(&self) -> Table {
     let (title, border_style) = border_style(&[Some("Files")], self.state.focus == Focus::Files);
 
-    Table::new([])
+    Table::new(rows::files(self.state))
       .block(
         Block::default()
           .title(title)
