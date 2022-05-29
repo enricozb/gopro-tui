@@ -21,7 +21,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 use self::{
   events::Event,
   render::sections,
-  state::{Popup, State},
+  state::{focus::Focus, Popup, State},
 };
 use crate::{channel::EventChannel, error::Result};
 
@@ -46,30 +46,30 @@ impl Ui {
     loop {
       self.render()?;
 
-      match (&self.state.popup(), self.event_channel.poll()?) {
-        (Popup::Input, Event::Key { code: Char(c), .. }) => self.state.input_char(c),
-        (Popup::Input, Event::Key { code: Backspace, .. }) => self.state.input_del(),
+      match (&self.state.focus, &self.state.popup(), self.event_channel.poll()?) {
+        (_, Popup::Input, Event::Key { code: Char(c), .. }) => self.state.input_char(c),
+        (_, Popup::Input, Event::Key { code: Backspace, .. }) => self.state.input_del(),
 
-        (Popup::None, Event::Key { code: Char('q'), .. }) => break,
+        (_, Popup::None, Event::Key { code: Char('q'), .. }) => break,
 
-        (Popup::None, Event::Key { code: Char('k'), .. }) => self.state.list_up(),
-        (Popup::None, Event::Key { code: Char('j'), .. }) => self.state.list_down(),
-        (Popup::None, Event::Key { code: Char('h' | 'l'), .. }) => self.state.toggle_focus(),
+        (_, Popup::None, Event::Key { code: Char('k'), .. }) => self.state.list_up(),
+        (_, Popup::None, Event::Key { code: Char('j'), .. }) => self.state.list_down(),
+        (_, Popup::None, Event::Key { code: Char('h' | 'l'), .. }) => self.state.toggle_focus(),
 
-        (Popup::None, Event::Key { code: Char('n'), .. }) => self.state.input(),
+        (Focus::Files, Popup::None, Event::Key { code: Char('n'), .. }) => self.state.input(),
 
-        (Popup::None, Event::Key { code: Enter, .. }) => {
+        (Focus::Files, Popup::None, Event::Key { code: Enter, .. }) => {
           if let Err(error) = self.state.enter() {
             self.event_channel.sender.send(Event::Error(format!("{:?}", error)))?;
           }
         }
 
-        (Popup::Input, Event::Key { code: Enter, .. }) => self.state.write_note(),
+        (_, Popup::Input, Event::Key { code: Enter, .. }) => self.state.write_note(),
 
-        (_, Event::Key { code: Esc, .. }) => self.state.escape(),
+        (_, _, Event::Key { code: Esc, .. }) => self.state.escape(),
 
-        (_, Event::File(file)) => self.state.add_file(*file),
-        (_, Event::Error(error)) => self.state.error(error),
+        (_, _, Event::File(file)) => self.state.add_file(*file),
+        (_, _, Event::Error(error)) => self.state.error(error),
 
         _ => (),
       }
