@@ -9,6 +9,7 @@ use self::{
   focus::Focus,
   session::{File, Session},
 };
+use crate::{error::Result, mpv};
 
 #[derive(Default)]
 pub struct State {
@@ -26,6 +27,10 @@ pub struct State {
 impl State {
   pub fn session(&self) -> Option<&Session> {
     self.sessions.iter().nth(self.sessions_idx).map(|e| e.1)
+  }
+
+  pub fn file(&self) -> Option<&File> {
+    self.session().map(|s| &s.files[self.files_idx])
   }
 
   pub fn files_len(&self) -> usize {
@@ -54,6 +59,14 @@ impl State {
       Focus::Files => Focus::Sessions,
       Focus::Sessions => Focus::Files,
     }
+  }
+
+  pub fn enter(&self) -> Result<()> {
+    if let Some(file) = self.file() {
+      mpv::preview(file)?;
+    };
+
+    Ok(())
   }
 
   pub fn list_up(&mut self) {

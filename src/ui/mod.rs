@@ -9,7 +9,10 @@ use std::{
 };
 
 use crossterm::{
-  event::{DisableMouseCapture, EnableMouseCapture, KeyCode::Char},
+  event::{
+    DisableMouseCapture, EnableMouseCapture,
+    KeyCode::{Char, Enter},
+  },
   execute,
   terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -46,6 +49,12 @@ impl Ui {
         Event::Key {
           code: Char('h' | 'l'), ..
         } => self.state.toggle_focus(),
+
+        Event::Key { code: Enter, .. } => {
+          if let Err(error) = self.state.enter() {
+            self.event_channel.sender.send(Event::Error(error.to_string()))?;
+          }
+        }
 
         Event::File(file) => self.state.add_file(file),
 

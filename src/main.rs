@@ -2,6 +2,7 @@ mod args;
 mod channel;
 mod error;
 mod importer;
+mod mpv;
 mod ui;
 
 use clap::Parser;

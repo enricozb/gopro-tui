@@ -74,7 +74,7 @@ impl<'a> Rowable<'a> for File {
   }
 }
 
-pub fn sessions<'a>(state: &'a State) -> Vec<Row<'a>> {
+pub fn sessions(state: &State) -> Vec<Row<'_>> {
   state
     .sessions
     .iter()
@@ -83,7 +83,7 @@ pub fn sessions<'a>(state: &'a State) -> Vec<Row<'a>> {
     .collect()
 }
 
-pub fn files<'a>(state: &'a State) -> Vec<Row<'a>> {
+pub fn files(state: &State) -> Vec<Row<'_>> {
   match state.session() {
     None => vec![],
     Some(Session { files, .. }) => files
