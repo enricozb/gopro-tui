@@ -10,7 +10,7 @@ use crate::{
 
 pub enum Event {
   Key { code: KeyCode, modifiers: KeyModifiers },
-  File(File),
+  File(Box<File>),
   Error(String),
   Tick,
 }

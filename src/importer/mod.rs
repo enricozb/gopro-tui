@@ -31,12 +31,12 @@ fn run(src_dir: PathBuf, event_sender: Sender<Event>) -> Result<()> {
       let ffprobe_info = ffmpeg::ffprobe(&path)?;
       let datetime = datetime::approximate_datetime(&path, &ffprobe_info)?;
 
-      event_sender.send(Event::File(File::new(
+      event_sender.send(Event::File(Box::new(File::new(
         path,
         file.metadata()?,
         datetime,
         ffprobe_info.seconds,
-      )))?;
+      ))))?;
     }
   }
 

@@ -56,7 +56,7 @@ impl Ui {
           }
         }
 
-        Event::File(file) => self.state.add_file(file),
+        Event::File(file) => self.state.add_file(*file),
 
         _ => (),
       }
