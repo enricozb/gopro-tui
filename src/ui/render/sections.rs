@@ -132,14 +132,14 @@ impl<'a> Sections<'a> {
 
   fn sessions_state(&self) -> TableState {
     let mut sessions_state = TableState::default();
-    sessions_state.select(Some(self.state.sessions_idx));
+    sessions_state.select(Some(self.state.session_idx));
 
     sessions_state
   }
 
   fn files_state(&self) -> TableState {
     let mut files_state = TableState::default();
-    files_state.select(Some(self.state.files_idx));
+    files_state.select(Some(self.state.file_idx));
 
     files_state
   }

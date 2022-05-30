@@ -76,7 +76,7 @@ pub fn sessions(state: &State) -> Vec<Row<'_>> {
     .sessions
     .iter()
     .enumerate()
-    .map(|(i, (_, s))| (s.row(i == state.sessions_idx, state.focus == Focus::Sessions)))
+    .map(|(i, (_, s))| (s.row(i == state.session_idx, state.focus == Focus::Sessions)))
     .collect()
 }
 
@@ -86,7 +86,7 @@ pub fn files(state: &State) -> Vec<Row<'_>> {
     Some(Session { files, .. }) => files
       .values()
       .enumerate()
-      .map(|(i, f)| (f.row(i == state.files_idx, state.focus == Focus::Files)))
+      .map(|(i, f)| (f.row(i == state.file_idx, state.focus == Focus::Files)))
       .collect(),
   }
 }

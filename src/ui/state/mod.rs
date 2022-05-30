@@ -20,27 +20,27 @@ pub struct State {
 
   pub sessions: BTreeMap<Date, Session>,
 
-  pub sessions_idx: usize,
-  pub files_idx: usize,
+  pub session_idx: usize,
+  pub file_idx: usize,
 }
 
 impl State {
   pub fn session(&self) -> Option<&Session> {
-    self.sessions.values().nth(self.sessions_idx)
+    self.sessions.values().nth(self.session_idx)
   }
 
   pub fn session_mut(&mut self) -> Option<&mut Session> {
-    self.sessions.values_mut().nth(self.sessions_idx)
+    self.sessions.values_mut().nth(self.session_idx)
   }
 
   pub fn file(&self) -> Option<&File> {
-    self.session().and_then(|s| s.files.values().nth(self.files_idx))
+    self.session().and_then(|s| s.files.values().nth(self.file_idx))
   }
 
   pub fn file_mut(&mut self) -> Option<&mut File> {
-    let files_idx = self.files_idx;
+    let file_idx = self.file_idx;
 
-    self.session_mut().and_then(|s| s.files.values_mut().nth(files_idx))
+    self.session_mut().and_then(|s| s.files.values_mut().nth(file_idx))
   }
 
   pub fn files_len(&self) -> usize {
@@ -96,8 +96,9 @@ impl State {
   }
 
   pub fn enter(&self) -> Result<()> {
-    if let Some(file) = self.file() {
-      mpv::preview(file)?;
+    if let Some(session) = self.session() {
+      mpv::load_session(session)?;
+      mpv::play(self.file_idx)?;
     };
 
     Ok(())
@@ -110,8 +111,8 @@ impl State {
 
   pub fn list_up(&mut self) {
     match self.focus {
-      Focus::Files => self.files_idx_dec(),
-      Focus::Sessions => self.sessions_idx_dec(),
+      Focus::Files => self.file_idx_dec(),
+      Focus::Sessions => self.session_idx_dec(),
     };
 
     self.clamp_idxs();
@@ -119,32 +120,32 @@ impl State {
 
   pub fn list_down(&mut self) {
     match self.focus {
-      Focus::Files => self.files_idx_inc(),
-      Focus::Sessions => self.sessions_idx_inc(),
+      Focus::Files => self.file_idx_inc(),
+      Focus::Sessions => self.session_idx_inc(),
     };
 
     self.clamp_idxs();
   }
 
   pub fn clamp_idxs(&mut self) {
-    self.files_idx = clamp(0, self.files_idx, self.files_len() - 1);
-    self.sessions_idx = clamp(0, self.sessions_idx, self.sessions.len() - 1);
+    self.file_idx = clamp(0, self.file_idx, self.files_len() - 1);
+    self.session_idx = clamp(0, self.session_idx, self.sessions.len() - 1);
   }
 
-  pub fn files_idx_inc(&mut self) {
-    self.files_idx = clamp(0, self.files_idx.saturating_add(1), self.files_len() - 1);
+  pub fn file_idx_inc(&mut self) {
+    self.file_idx = clamp(0, self.file_idx.saturating_add(1), self.files_len() - 1);
   }
 
-  pub fn files_idx_dec(&mut self) {
-    self.files_idx = clamp(0, self.files_idx.saturating_sub(1), self.files_len() - 1);
+  pub fn file_idx_dec(&mut self) {
+    self.file_idx = clamp(0, self.file_idx.saturating_sub(1), self.files_len() - 1);
   }
 
-  pub fn sessions_idx_inc(&mut self) {
-    self.sessions_idx = clamp(0, self.sessions_idx.saturating_add(1), self.sessions.len() - 1);
+  pub fn session_idx_inc(&mut self) {
+    self.session_idx = clamp(0, self.session_idx.saturating_add(1), self.sessions.len() - 1);
   }
 
-  pub fn sessions_idx_dec(&mut self) {
-    self.sessions_idx = clamp(0, self.sessions_idx.saturating_sub(1), self.sessions.len() - 1);
+  pub fn session_idx_dec(&mut self) {
+    self.session_idx = clamp(0, self.session_idx.saturating_sub(1), self.sessions.len() - 1);
   }
 
   pub fn write_note(&mut self) {
