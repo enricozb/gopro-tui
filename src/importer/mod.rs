@@ -36,7 +36,7 @@ fn run(src_dir: &Path, event_sender: &Sender<Event>) -> Result<()> {
     let path = file.path();
 
     let ffprobe_info = ffmpeg::ffprobe(path)?;
-    let date = datetime::approximate_datetime(path, &ffprobe_info)?.naive_local().date();
+    let date = datetime::approximate(path, &ffprobe_info)?.naive_local().date();
 
     event_sender.send(Event::File(Box::new(File::new(
       path.to_path_buf(),
