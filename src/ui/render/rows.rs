@@ -33,7 +33,7 @@ impl<'a> Rowable<'a> for Session {
         Style::default().fg(count_color).add_modifier(modifier),
       ),
       Span::styled(
-        human_readable_size(self.files.iter().map(|f| f.metadata.size()).sum::<u64>()),
+        human_readable_size(self.files.values().map(|f| f.metadata.size()).sum::<u64>()),
         Style::default().fg(size_color).add_modifier(modifier),
       ),
     ])
@@ -84,7 +84,7 @@ pub fn files(state: &State) -> Vec<Row<'_>> {
   match state.session() {
     None => vec![],
     Some(Session { files, .. }) => files
-      .iter()
+      .values()
       .enumerate()
       .map(|(i, f)| (f.row(i == state.files_idx, state.focus == Focus::Files)))
       .collect(),

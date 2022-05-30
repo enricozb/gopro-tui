@@ -29,8 +29,18 @@ impl State {
     self.sessions.values().nth(self.sessions_idx)
   }
 
+  pub fn session_mut(&mut self) -> Option<&mut Session> {
+    self.sessions.values_mut().nth(self.sessions_idx)
+  }
+
   pub fn file(&self) -> Option<&File> {
-    self.session().map(|s| &s.files[self.files_idx])
+    self.session().and_then(|s| s.files.values().nth(self.files_idx))
+  }
+
+  pub fn file_mut(&mut self) -> Option<&mut File> {
+    let files_idx = self.files_idx;
+
+    self.session_mut().and_then(|s| s.files.values_mut().nth(files_idx))
   }
 
   pub fn files_len(&self) -> usize {
@@ -45,19 +55,17 @@ impl State {
     }
   }
 
-  pub fn add_file(&mut self, file: File) {
+  pub fn add_file(&mut self, file: File) -> Result<()> {
     match self.sessions.get_mut(&file.date) {
-      Some(session) => session.files.push(file),
+      Some(session) => session.insert_file(file)?,
       None => {
-        self.sessions.insert(
-          file.date.clone(),
-          Session {
-            date: file.date.clone(),
-            files: vec![file],
-          },
-        );
+        self
+          .sessions
+          .insert(file.date.clone(), Session::new(file.date.clone(), vec![file])?);
       }
-    }
+    };
+
+    Ok(())
   }
 
   pub fn input(&mut self) {
@@ -140,10 +148,10 @@ impl State {
   }
 
   pub fn write_note(&mut self) {
-    if let Some(input) = &self.input {
-      if let Some((_, ref mut session)) = self.sessions.iter_mut().nth(self.sessions_idx) {
-        session.files[self.files_idx].note = Some(input.clone());
-      };
+    if let Some(input) = self.input.clone() {
+      if let Some(ref mut file) = self.file_mut() {
+        file.note = Some(input)
+      }
     };
 
     self.input = None;

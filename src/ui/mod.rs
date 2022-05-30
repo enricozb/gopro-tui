@@ -82,7 +82,7 @@ impl Ui {
             file.note = self.cache.notes.get(&file_name.to_string_lossy().into_owned()).cloned();
           }
 
-          self.state.add_file(*file);
+          self.state.add_file(*file)?;
         }
         (_, _, Event::Error(error)) => self.state.error(error),
 
