@@ -84,6 +84,8 @@ impl Ui {
 
         (_, _, Event::Error(error)) => self.state.error(error),
 
+        (_, _, Event::Tick) => self.state.sync()?,
+
         _ => (),
       }
     }

@@ -157,6 +157,14 @@ impl State {
 
     self.input = None;
   }
+
+  pub fn sync(&mut self) -> Result<()> {
+    if let Some(idx) = mpv::current_position() {
+      self.file_idx = idx;
+    }
+
+    Ok(())
+  }
 }
 
 pub enum Popup {

@@ -6,8 +6,8 @@ use std::{
 use mpvipc::{Mpv, MpvCommand, PlaylistAddOptions};
 
 use crate::{
-  channel::{EventChannel, ResultChannel},
-  error::{err, Result},
+  channel::ResultChannel,
+  error::{err, Result, WrapErr},
   ui::state::session::Session,
 };
 
@@ -34,7 +34,27 @@ pub fn play(file_idx: usize) -> Result<()> {
   Ok(())
 }
 
-pub fn run_idle() -> Result<()> {
+pub fn current_position() -> Option<usize> {
+  if let Some(mpv) = Mpv::connect(SOCKET).ok() {
+    let pos: Result<f64> = mpv.get_property("playlist-pos").wrap_err("get property");
+
+    match pos {
+      Err(_) => None,
+      Ok(idx) if idx < 0.0 => None,
+      Ok(idx) => Some(idx as usize),
+    }
+  } else {
+    None
+  }
+}
+
+pub fn spawn(result_channel: &ResultChannel) {
+  let result_sender = result_channel.sender();
+
+  thread::spawn(move || result_sender.send(run_idle()).unwrap());
+}
+
+fn run_idle() -> Result<()> {
   loop {
     let status = Command::new("mpv")
       .args(["--idle", format!("--input-ipc-server={}", SOCKET).as_str()])
@@ -47,10 +67,4 @@ pub fn run_idle() -> Result<()> {
       return Err(err!("mpv exited with exit code {:?}", status.code()));
     }
   }
-}
-
-pub fn spawn(event_channel: &EventChannel, result_channel: &ResultChannel) {
-  let result_sender = result_channel.sender();
-
-  thread::spawn(move || result_sender.send(run_idle()).unwrap());
 }

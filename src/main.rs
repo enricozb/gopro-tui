@@ -29,7 +29,7 @@ fn main() -> Result<()> {
 
   events::spawn(&event_channel, &result_channel);
   importer::spawn(args.src_dir, &event_channel, &result_channel, cache.clone());
-  mpv::spawn(&event_channel, &result_channel);
+  mpv::spawn(&result_channel);
 
   ui::spawn(event_channel, &result_channel, cache);
   result_channel.poll()??;
