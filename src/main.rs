@@ -6,6 +6,7 @@ mod error;
 mod importer;
 mod mpv;
 mod ui;
+mod utils;
 
 use clap::Parser;
 
@@ -27,7 +28,7 @@ fn main() -> Result<()> {
   let result_channel = ResultChannel::new();
 
   events::spawn(&event_channel, &result_channel);
-  importer::spawn(args.src_dir, &event_channel, &result_channel);
+  importer::spawn(args.src_dir, &event_channel, &result_channel, cache.clone());
 
   ui::spawn(event_channel, &result_channel, cache);
   result_channel.poll()??;

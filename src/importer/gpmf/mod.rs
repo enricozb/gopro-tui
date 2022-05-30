@@ -9,10 +9,9 @@ use nom::{
   IResult,
 };
 use serde::Serialize;
-use stable_eyre::eyre::eyre;
 use types::Gps5;
 
-use crate::error::Result;
+use crate::error::{err, Result};
 
 #[derive(Serialize)]
 pub enum Gpmf {
@@ -65,19 +64,11 @@ impl Gpmf {
       },
 
       ("SCAL", kind::I32) => Self::Scale {
-        divisors: all_consuming(many0(be_i32))(data)?
-          .1
-          .into_iter()
-          .map(i64::from)
-          .collect(),
+        divisors: all_consuming(many0(be_i32))(data)?.1.into_iter().map(i64::from).collect(),
       },
 
       ("SCAL", kind::I16) => Self::Scale {
-        divisors: all_consuming(many0(be_i16))(data)?
-          .1
-          .into_iter()
-          .map(i64::from)
-          .collect(),
+        divisors: all_consuming(many0(be_i16))(data)?.1.into_iter().map(i64::from).collect(),
       },
 
       ("GPS5", kind::I32) => Self::Gps5 {
@@ -145,7 +136,7 @@ impl Gpmf {
     match Self::parse_many(input) {
       Ok(([], entries)) => Ok(entries),
       Ok(_) => unreachable!(),
-      Err(error) => Err(eyre!("Failed to parse gpmf data: {}", error)),
+      Err(error) => Err(err!("Failed to parse gpmf data: {}", error)),
     }
   }
 }

@@ -1,9 +1,8 @@
 use std::{fmt::Display, path::Path, process::Command, result, str::FromStr};
 
 use serde::{de, Deserialize, Deserializer};
-use stable_eyre::eyre::eyre;
 
-use crate::error::Result;
+use crate::error::{err, Result};
 
 pub struct FFProbeInfo {
   pub gpmd_index: u64,
@@ -67,7 +66,7 @@ pub fn ffprobe(file: &Path) -> Result<FFProbeInfo> {
   let gpmd_index = streams
     .iter()
     .find(|s| s.codec_tag_string == "gpmd")
-    .ok_or(eyre!("no gpmf data found"))?
+    .ok_or(err!("no gpmf data found"))?
     .index;
 
   Ok(FFProbeInfo {

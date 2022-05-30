@@ -1,12 +1,11 @@
 use std::{fs, path::PathBuf};
 
 use directories::ProjectDirs;
-use stable_eyre::eyre::eyre;
 
-use crate::error::Result;
+use crate::error::{err, Result};
 
 pub fn project_dirs() -> Result<ProjectDirs> {
-  ProjectDirs::from("com", "enricozb", env!("CARGO_PKG_NAME")).ok_or(eyre!("Couldn't construct project directories"))
+  ProjectDirs::from("com", "enricozb", env!("CARGO_PKG_NAME")).ok_or(err!("Couldn't construct project directories"))
 }
 
 pub fn config() -> Result<PathBuf> {

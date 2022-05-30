@@ -1,8 +1,9 @@
 use std::process::{Command, Stdio};
 
-use stable_eyre::eyre::WrapErr;
-
-use crate::{error::Result, ui::state::session::File};
+use crate::{
+  error::{Result, WrapErr},
+  ui::state::session::File,
+};
 
 pub fn preview(file: &File) -> Result<()> {
   Command::new("mpv")

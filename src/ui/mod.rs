@@ -15,7 +15,6 @@ use crossterm::{
   execute,
   terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use stable_eyre::eyre::eyre;
 use tui::{backend::CrosstermBackend, Terminal};
 
 use self::{
@@ -77,13 +76,12 @@ impl Ui {
 
         (_, _, Event::Key { code: Esc, .. }) => self.state.escape(),
 
-        (_, _, Event::File(mut file)) => {
-          if let Some(file_name) = file.path.file_name() {
-            file.note = self.cache.notes.get(&file_name.to_string_lossy().into_owned()).cloned();
-          }
-
+        (_, _, Event::File(file)) => {
+          self.cache.set(&file)?;
           self.state.add_file(*file)?;
+          self.cache.save()?;
         }
+
         (_, _, Event::Error(error)) => self.state.error(error),
 
         _ => (),
@@ -95,19 +93,8 @@ impl Ui {
 
   fn update_file_cache(&mut self) -> Result<()> {
     if let Some(file) = self.state.file() {
-      if let Some(note) = &file.note {
-        self.cache.notes.insert(
-          file
-            .path
-            .file_name()
-            .ok_or_else(|| eyre!("file has no basename: {}", file.path.display()))?
-            .to_string_lossy()
-            .to_string(),
-          note.clone(),
-        );
-
-        self.cache.save()?;
-      };
+      self.cache.set(file)?;
+      self.cache.save()?;
     };
 
     Ok(())

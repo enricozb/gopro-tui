@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, fs::Metadata, iter, path::PathBuf, time::SystemTime};
 
-use crate::error::Result;
+use crate::{error::Result, utils};
 
 pub type Date = String;
 
@@ -36,18 +36,11 @@ pub struct File {
 }
 
 impl File {
-  pub fn new(path: PathBuf, metadata: Metadata, date: Date, seconds: f64) -> Self {
-    Self {
-      path,
-      metadata,
-      date,
-      seconds,
-
-      note: None,
-    }
-  }
-
   pub fn time(&self) -> Result<SystemTime> {
     Ok(self.metadata.created()?)
+  }
+
+  pub fn name(&self) -> Result<String> {
+    utils::file_name(&self.path)
   }
 }

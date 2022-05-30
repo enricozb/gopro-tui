@@ -11,39 +11,51 @@ use std::{
 use walkdir::{DirEntry, WalkDir};
 
 use crate::{
+  cache::CacheEntry,
   channel::{EventChannel, ResultChannel},
   error::Result,
   events::Event,
   ui::state::session::File,
+  utils,
 };
 
-pub fn spawn(src_dir: PathBuf, event_channel: &EventChannel, result_channel: &ResultChannel) {
+pub fn spawn(src_dir: PathBuf, event_channel: &EventChannel, result_channel: &ResultChannel, cache: CacheEntry) {
   let event_sender = event_channel.sender();
   let result_sender = result_channel.sender();
 
-  thread::spawn(move || match run(&src_dir, &event_sender) {
+  thread::spawn(move || match run(&src_dir, &event_sender, cache) {
     Ok(_) => (),
     error => result_sender.send(error).unwrap(),
   });
 }
 
-fn run(src_dir: &Path, event_sender: &Sender<Event>) -> Result<()> {
+fn run(src_dir: &Path, event_sender: &Sender<Event>, cache: CacheEntry) -> Result<()> {
   for file in WalkDir::new(src_dir.join("DCIM")).into_iter().filter_map(std::result::Result::ok) {
     if !is_mp4(&file) {
       continue;
     };
 
     let path = file.path();
+    let file_name = utils::file_name(path)?;
 
-    let ffprobe_info = ffmpeg::ffprobe(path)?;
-    let date = datetime::approximate(path, &ffprobe_info)?.naive_local().date();
+    let (date, note, seconds) = if let Some(file) = cache.get(&file_name) {
+      (file.date, file.note, file.seconds)
+    } else {
+      let ffprobe_info = ffmpeg::ffprobe(path)?;
+      (
+        datetime::approximate(path, &ffprobe_info)?.naive_local().date().to_string(),
+        None,
+        ffprobe_info.seconds,
+      )
+    };
 
-    event_sender.send(Event::File(Box::new(File::new(
-      path.to_path_buf(),
-      file.metadata()?,
-      date.to_string(),
-      ffprobe_info.seconds,
-    ))))?;
+    event_sender.send(Event::File(Box::new(File {
+      path: path.to_path_buf(),
+      metadata: file.metadata()?,
+      date,
+      seconds,
+      note,
+    })))?;
   }
 
   Ok(())

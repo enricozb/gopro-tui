@@ -1,8 +1,8 @@
 mod version;
 
 use std::{
-  collections::HashMap,
-  fs::{self, File},
+  collections::BTreeMap,
+  fs::{self, File as StdFile},
   io::BufReader,
   path::Path,
 };
@@ -10,7 +10,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use self::version::{SerialNumber, Version};
-use crate::{dirs, error::Result};
+use crate::{dirs, error::Result, ui::state::session::File as UiFile};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -19,13 +19,13 @@ type FileName = String;
 #[derive(Serialize, Deserialize, Default)]
 struct Cache {
   version: String,
-  entries: HashMap<SerialNumber, CacheEntry>,
+  entries: BTreeMap<SerialNumber, CacheEntry>,
 }
 
 impl Cache {
   fn from(path: &Path) -> Result<Self> {
     if path.exists() {
-      let file = File::open(path)?;
+      let file = StdFile::open(path)?;
       let reader = BufReader::new(file);
 
       Ok(serde_json::from_reader(reader)?)
@@ -48,7 +48,7 @@ pub struct CacheEntry {
   #[serde(skip)]
   serial: SerialNumber,
 
-  pub notes: HashMap<FileName, String>,
+  files: BTreeMap<FileName, File>,
 }
 
 impl CacheEntry {
@@ -66,9 +66,33 @@ impl CacheEntry {
     Ok(cache_entry)
   }
 
+  pub fn get(&self, file_name: &str) -> Option<File> {
+    self.files.get(file_name).cloned()
+  }
+
+  pub fn set(&mut self, file: &UiFile) -> Result<()> {
+    self.files.insert(
+      file.name()?,
+      File {
+        note: file.note.clone(),
+        date: file.date.clone(),
+        seconds: file.seconds,
+      },
+    );
+
+    Ok(())
+  }
+
   pub fn save(&self) -> Result<()> {
     let mut cache = Cache::from(&dirs::config_json()?)?;
     cache.entries.insert(self.serial.clone(), self.clone());
     cache.save(&dirs::config_json()?)
   }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct File {
+  pub note: Option<String>,
+  pub date: String,
+  pub seconds: f64,
 }
