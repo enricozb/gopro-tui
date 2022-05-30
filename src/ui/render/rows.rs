@@ -27,10 +27,7 @@ impl<'a> Rowable<'a> for Session {
     };
 
     Row::new(vec![
-      Span::styled(
-        self.date.to_string(),
-        Style::default().fg(date_color).add_modifier(modifier),
-      ),
+      Span::styled(self.date.clone(), Style::default().fg(date_color).add_modifier(modifier)),
       Span::styled(
         self.files.len().to_string(),
         Style::default().fg(count_color).add_modifier(modifier),

@@ -3,11 +3,9 @@ pub mod session;
 
 use std::collections::BTreeMap;
 
-use chrono::naive::NaiveDate;
-
 use self::{
   focus::Focus,
-  session::{File, Session},
+  session::{Date, File, Session},
 };
 use crate::{error::Result, mpv};
 
@@ -20,7 +18,7 @@ pub struct State {
   pub input: Option<String>,
   pub error: Option<String>,
 
-  pub sessions: BTreeMap<NaiveDate, Session>,
+  pub sessions: BTreeMap<Date, Session>,
 
   pub sessions_idx: usize,
   pub files_idx: usize,
@@ -28,7 +26,7 @@ pub struct State {
 
 impl State {
   pub fn session(&self) -> Option<&Session> {
-    self.sessions.iter().nth(self.sessions_idx).map(|e| e.1)
+    self.sessions.values().nth(self.sessions_idx)
   }
 
   pub fn file(&self) -> Option<&File> {
@@ -48,23 +46,27 @@ impl State {
   }
 
   pub fn add_file(&mut self, file: File) {
-    let date = file.datetime.naive_local().date();
-
-    match self.sessions.get_mut(&date) {
+    match self.sessions.get_mut(&file.date) {
       Some(session) => session.files.push(file),
       None => {
-        self.sessions.insert(date, Session { date, files: vec![file] });
+        self.sessions.insert(
+          file.date.clone(),
+          Session {
+            date: file.date.clone(),
+            files: vec![file],
+          },
+        );
       }
     }
   }
 
   pub fn input(&mut self) {
-    self.input = self.file().and_then(|f| f.note.clone()).or_else(|| Some("".to_string()))
+    self.input = self.file().and_then(|f| f.note.clone()).or_else(|| Some("".to_string()));
   }
 
   pub fn input_char(&mut self, c: char) {
     if let Some(s) = self.input.as_mut() {
-      s.push(c)
+      s.push(c);
     }
   }
 
@@ -75,7 +77,7 @@ impl State {
   }
 
   pub fn error(&mut self, error: String) {
-    self.error = Some(error)
+    self.error = Some(error);
   }
 
   pub fn toggle_focus(&mut self) {
@@ -144,7 +146,7 @@ impl State {
       };
     };
 
-    self.input = None
+    self.input = None;
   }
 }
 

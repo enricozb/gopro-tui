@@ -69,7 +69,7 @@ impl<'a> Sections<'a> {
       frame.render_widget(Clear, self.input);
       frame.render_widget(self.input(input.clone()), self.input);
 
-      frame.set_cursor(self.input.x + input.chars().count() as u16 + 1, self.input.y + 1)
+      frame.set_cursor(self.input.x + input.chars().count() as u16 + 1, self.input.y + 1);
     }
   }
 
