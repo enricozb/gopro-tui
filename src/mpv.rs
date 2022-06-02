@@ -60,13 +60,23 @@ impl Player {
   pub fn load_session(&mut self, session: &Session) -> Result<()> {
     let mpv = self.mpv_connection()?;
 
+    // if the player is currently playing, then the player position is non-negative.
+    // when clearing the playlist, mpv won't clear the currently playing item, so set
+    // the playlist position to 0 and replace it on the first iteration of the loop.
+    let is_playing = self.is_playing();
+    if is_playing {
+      mpv.set_property("playlist-pos", 0)?;
+    }
     mpv.run_command(MpvCommand::PlaylistClear)?;
-    mpv.set_property("playlist-pos", -1.0)?;
 
-    for file in session.files.values() {
+    for (i, file) in session.files.values().enumerate() {
       mpv.run_command(MpvCommand::LoadFile {
         file: file.path.to_string_lossy().to_string(),
-        option: PlaylistAddOptions::Append,
+        option: if i == 0 && is_playing {
+          PlaylistAddOptions::Replace
+        } else {
+          PlaylistAddOptions::Append
+        },
       })?;
     }
 
