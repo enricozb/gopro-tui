@@ -116,6 +116,8 @@ impl State {
     };
 
     self.clamp_idxs();
+
+    self.f().ok();
   }
 
   pub fn list_down(&mut self) {
@@ -125,6 +127,8 @@ impl State {
     };
 
     self.clamp_idxs();
+
+    self.f().ok();
   }
 
   pub fn clamp_idxs(&mut self) {
@@ -158,8 +162,25 @@ impl State {
     self.input = None;
   }
 
+  pub fn f(&self) -> Result<()> {
+    match self.focus {
+      Focus::Files => {
+        if mpv::is_playing() {
+          mpv::set_position(self.file_idx)
+        }
+      }
+      Focus::Sessions => {
+        if let Some(session) = self.session() {
+          mpv::load_session(session)?
+        }
+      }
+    };
+
+    Ok(())
+  }
+
   pub fn sync(&mut self) -> Result<()> {
-    if let Some(idx) = mpv::current_position() {
+    if let Some(idx) = mpv::get_position() {
       self.file_idx = idx;
     }
 

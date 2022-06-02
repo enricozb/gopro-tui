@@ -11,10 +11,14 @@ use crate::{
   ui::state::session::Session,
 };
 
-const SOCKET: &'static str = "/tmp/gopro-importer-mpv-socket";
+const SOCKET: &str = "/tmp/gopro-importer-mpv-socket";
 
 pub fn load_session(session: &Session) -> Result<()> {
   let mpv = Mpv::connect(SOCKET)?;
+
+  // clear the current playlist
+  mpv.set_property("playlist-pos", -1.0)?;
+  mpv.run_command(MpvCommand::PlaylistClear)?;
 
   for file in session.files.values() {
     mpv.run_command(MpvCommand::LoadFile {
@@ -34,8 +38,12 @@ pub fn play(file_idx: usize) -> Result<()> {
   Ok(())
 }
 
-pub fn current_position() -> Option<usize> {
-  if let Some(mpv) = Mpv::connect(SOCKET).ok() {
+pub fn is_playing() -> bool {
+  get_position() != None
+}
+
+pub fn get_position() -> Option<usize> {
+  if let Ok(mpv) = Mpv::connect(SOCKET) {
     let pos: Result<f64> = mpv.get_property("playlist-pos").wrap_err("get property");
 
     match pos {
@@ -45,6 +53,12 @@ pub fn current_position() -> Option<usize> {
     }
   } else {
     None
+  }
+}
+
+pub fn set_position(file_idx: usize) {
+  if let Ok(mpv) = Mpv::connect(SOCKET) {
+    mpv.set_property("playlist-pos", file_idx).ok();
   }
 }
 
