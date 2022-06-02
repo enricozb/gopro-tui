@@ -7,9 +7,8 @@ use self::{
   focus::Focus,
   session::{Date, File, Session},
 };
-use crate::{error::Result, mpv};
+use crate::{error::Result, mpv::Player};
 
-#[derive(Default)]
 pub struct State {
   pub src_dir: Option<String>,
   pub dst_dir: Option<String>,
@@ -22,9 +21,29 @@ pub struct State {
 
   pub session_idx: usize,
   pub file_idx: usize,
+
+  pub player: Player,
 }
 
 impl State {
+  pub fn new() -> Result<Self> {
+    Ok(Self {
+      src_dir: None,
+      dst_dir: None,
+
+      focus: Focus::default(),
+      input: None,
+      error: None,
+
+      sessions: BTreeMap::new(),
+
+      session_idx: 0,
+      file_idx: 0,
+
+      player: Player::new()?,
+    })
+  }
+
   pub fn session(&self) -> Option<&Session> {
     self.sessions.values().nth(self.session_idx)
   }
@@ -95,10 +114,10 @@ impl State {
     }
   }
 
-  pub fn enter(&self) -> Result<()> {
-    if let Some(session) = self.session() {
-      mpv::load_session(session)?;
-      mpv::play(self.file_idx)?;
+  pub fn enter(&mut self) -> Result<()> {
+    if let Some(session) = self.session().cloned() {
+      self.player.load_session(&session)?;
+      self.player.play(self.file_idx)?;
     };
 
     Ok(())
@@ -117,7 +136,7 @@ impl State {
 
     self.clamp_idxs();
 
-    self.f().ok();
+    self.update_player().ok();
   }
 
   pub fn list_down(&mut self) {
@@ -128,7 +147,7 @@ impl State {
 
     self.clamp_idxs();
 
-    self.f().ok();
+    self.update_player().ok();
   }
 
   pub fn clamp_idxs(&mut self) {
@@ -162,16 +181,16 @@ impl State {
     self.input = None;
   }
 
-  pub fn f(&self) -> Result<()> {
+  pub fn update_player(&mut self) -> Result<()> {
     match self.focus {
       Focus::Files => {
-        if mpv::is_playing() {
-          mpv::set_position(self.file_idx)
+        if self.player.is_playing() {
+          self.player.set_playlist_pos(self.file_idx)
         }
       }
       Focus::Sessions => {
-        if let Some(session) = self.session() {
-          mpv::load_session(session)?
+        if let Some(session) = self.session().cloned() {
+          self.player.load_session(&session)?
         }
       }
     };
@@ -180,7 +199,7 @@ impl State {
   }
 
   pub fn sync(&mut self) -> Result<()> {
-    if let Some(idx) = mpv::get_position() {
+    if let Some(idx) = self.player.playlist_pos() {
       self.file_idx = idx;
     }
 

@@ -40,7 +40,7 @@ impl Ui {
     Ok(Self {
       cache,
       event_channel,
-      state: State::default(),
+      state: State::new()?,
       terminal: Terminal::new(CrosstermBackend::new(io::stdout()))?,
     })
   }

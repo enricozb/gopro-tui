@@ -4,6 +4,7 @@ use crate::{error::Result, utils};
 
 pub type Date = String;
 
+#[derive(Clone)]
 pub struct Session {
   pub date: Date,
   pub files: BTreeMap<SystemTime, File>,
@@ -26,6 +27,7 @@ impl Session {
   }
 }
 
+#[derive(Clone)]
 pub struct File {
   pub path: PathBuf,
   pub metadata: Metadata,

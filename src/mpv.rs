@@ -1,84 +1,98 @@
 use std::{
-  process::{Command, Stdio},
-  thread,
+  path::{Path, PathBuf},
+  process::{Child, Command, Stdio},
 };
 
 use mpvipc::{Mpv, MpvCommand, PlaylistAddOptions};
 
 use crate::{
-  channel::ResultChannel,
   error::{err, Result, WrapErr},
   ui::state::session::Session,
 };
 
 const SOCKET: &str = "/tmp/gopro-importer-mpv-socket";
 
-pub fn load_session(session: &Session) -> Result<()> {
-  let mpv = Mpv::connect(SOCKET)?;
+pub struct Player {
+  socket: PathBuf,
+  process: Child,
+}
 
-  // clear the current playlist
-  mpv.set_property("playlist-pos", -1.0)?;
-  mpv.run_command(MpvCommand::PlaylistClear)?;
+impl Player {
+  pub fn new() -> Result<Self> {
+    let socket = PathBuf::from(SOCKET);
 
-  for file in session.files.values() {
-    mpv.run_command(MpvCommand::LoadFile {
-      file: file.path.to_string_lossy().to_string(),
-      option: PlaylistAddOptions::Append,
-    })?;
+    Ok(Self {
+      process: spawn_mpv_instance(&socket)?,
+      socket,
+    })
   }
 
-  Ok(())
-}
+  pub fn play(&mut self, file_idx: usize) -> Result<()> {
+    self.mpv_connection()?.playlist_play_id(file_idx)?;
 
-pub fn play(file_idx: usize) -> Result<()> {
-  let mpv = Mpv::connect(SOCKET)?;
+    Ok(())
+  }
 
-  mpv.playlist_play_id(file_idx)?;
+  pub fn is_playing(&mut self) -> bool {
+    self.playlist_pos() != None
+  }
 
-  Ok(())
-}
-
-pub fn is_playing() -> bool {
-  get_position() != None
-}
-
-pub fn get_position() -> Option<usize> {
-  if let Ok(mpv) = Mpv::connect(SOCKET) {
-    let pos: Result<f64> = mpv.get_property("playlist-pos").wrap_err("get property");
-
-    match pos {
-      Err(_) => None,
-      Ok(idx) if idx < 0.0 => None,
-      Ok(idx) => Some(idx as usize),
+  // TODO(enricozb): should this return a Result?
+  pub fn playlist_pos(&mut self) -> Option<usize> {
+    if let Ok(mpv) = self.mpv_connection() {
+      match mpv.get_property::<f64>("playlist-pos").wrap_err("get property") {
+        Err(_) => None,
+        Ok(idx) if idx < 0.0 => None,
+        Ok(idx) => Some(idx as usize),
+      }
+    } else {
+      None
     }
-  } else {
-    None
+  }
+
+  // TODO(enricozb): should this return a Result?
+  pub fn set_playlist_pos(&mut self, playlist_pos: usize) {
+    if let Ok(mpv) = Mpv::connect(SOCKET) {
+      mpv.set_property("playlist-pos", playlist_pos).ok();
+    }
+  }
+
+  pub fn load_session(&mut self, session: &Session) -> Result<()> {
+    let mpv = self.mpv_connection()?;
+
+    mpv.run_command(MpvCommand::PlaylistClear)?;
+    mpv.set_property("playlist-pos", -1.0)?;
+
+    for file in session.files.values() {
+      mpv.run_command(MpvCommand::LoadFile {
+        file: file.path.to_string_lossy().to_string(),
+        option: PlaylistAddOptions::Append,
+      })?;
+    }
+
+    Ok(())
+  }
+
+  fn mpv_connection(&mut self) -> Result<Mpv> {
+    if let Some(status) = self.process.try_wait()? {
+      if !status.success() {
+        return Err(err!("mpv exited with exit code {:?}", status.code()));
+      } else {
+        self.process = spawn_mpv_instance(&self.socket)?;
+      }
+    };
+
+    Ok(Mpv::connect(SOCKET)?)
   }
 }
 
-pub fn set_position(file_idx: usize) {
-  if let Ok(mpv) = Mpv::connect(SOCKET) {
-    mpv.set_property("playlist-pos", file_idx).ok();
-  }
-}
-
-pub fn spawn(result_channel: &ResultChannel) {
-  let result_sender = result_channel.sender();
-
-  thread::spawn(move || result_sender.send(run_idle()).unwrap());
-}
-
-fn run_idle() -> Result<()> {
-  loop {
-    let status = Command::new("mpv")
-      .args(["--idle", format!("--input-ipc-server={}", SOCKET).as_str()])
+fn spawn_mpv_instance<P: AsRef<Path>>(socket: P) -> Result<Child> {
+  Ok(
+    Command::new("mpv")
+      .args(["--idle", format!("--input-ipc-server={}", socket.as_ref().display()).as_str()])
       .stdin(Stdio::null())
       .stdout(Stdio::null())
       .stderr(Stdio::null())
-      .status()?;
-
-    if !status.success() {
-      return Err(err!("mpv exited with exit code {:?}", status.code()));
-    }
-  }
+      .spawn()?,
+  )
 }
