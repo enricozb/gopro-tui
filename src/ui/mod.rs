@@ -57,6 +57,15 @@ impl Ui {
 
         (_, Popup::None, Event::Key { code: Char('q'), .. }) => break,
 
+        (_, Popup::None, Event::Key { code: Char('a'), .. }) => {
+          self.state.toggle_file_import();
+          self.update_file_cache()?;
+        }
+        (_, Popup::None, Event::Key { code: Char('d'), .. }) => {
+          self.state.toggle_file_ignore();
+          self.update_file_cache()?;
+        }
+
         (_, Popup::None, Event::Key { code: Char('k'), .. }) => self.state.list_up(),
         (_, Popup::None, Event::Key { code: Char('j'), .. }) => self.state.list_down(),
         (_, Popup::None, Event::Key { code: Char('h' | 'l'), .. }) => self.state.toggle_focus(),

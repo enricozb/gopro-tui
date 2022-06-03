@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use self::{
   focus::Focus,
-  session::{Date, File, Session},
+  session::{Date, File, Session, Status},
 };
 use crate::{error::Result, mpv::Player};
 
@@ -85,6 +85,26 @@ impl State {
     };
 
     Ok(())
+  }
+
+  pub fn toggle_file_import(&mut self) {
+    if let Some(file) = self.file_mut() {
+      file.status = if file.status == Some(Status::Import) {
+        None
+      } else {
+        Some(Status::Import)
+      }
+    }
+  }
+
+  pub fn toggle_file_ignore(&mut self) {
+    if let Some(file) = self.file_mut() {
+      file.status = if file.status == Some(Status::Ignore) {
+        None
+      } else {
+        Some(Status::Ignore)
+      }
+    }
   }
 
   pub fn input(&mut self) {

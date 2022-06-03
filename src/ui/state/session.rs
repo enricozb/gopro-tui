@@ -1,5 +1,7 @@
 use std::{collections::BTreeMap, fs::Metadata, iter, path::PathBuf, time::SystemTime};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{error::Result, utils};
 
 pub type Date = String;
@@ -35,6 +37,7 @@ pub struct File {
   pub seconds: f64,
 
   pub note: Option<String>,
+  pub status: Option<Status>,
 }
 
 impl File {
@@ -45,4 +48,10 @@ impl File {
   pub fn name(&self) -> Result<String> {
     utils::file_name(&self.path)
   }
+}
+
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub enum Status {
+  Import,
+  Ignore,
 }

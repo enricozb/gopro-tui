@@ -10,7 +10,11 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use self::version::{SerialNumber, Version};
-use crate::{dirs, error::Result, ui::state::session::File as UiFile};
+use crate::{
+  dirs,
+  error::Result,
+  ui::state::session::{File as UiFile, Status as UiFileStatus},
+};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -74,9 +78,10 @@ impl CacheEntry {
     self.files.insert(
       file.name()?,
       File {
-        note: file.note.clone(),
         date: file.date.clone(),
         seconds: file.seconds,
+        note: file.note.clone(),
+        status: file.status.clone(),
       },
     );
 
@@ -92,7 +97,8 @@ impl CacheEntry {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct File {
-  pub note: Option<String>,
   pub date: String,
   pub seconds: f64,
+  pub note: Option<String>,
+  pub status: Option<UiFileStatus>,
 }

@@ -38,14 +38,15 @@ fn run(src_dir: &Path, event_sender: &Sender<Event>, cache: CacheEntry) -> Resul
     let path = file.path();
     let file_name = utils::file_name(path)?;
 
-    let (date, note, seconds) = if let Some(file) = cache.get(&file_name) {
-      (file.date, file.note, file.seconds)
+    let (date, seconds, note, status) = if let Some(file) = cache.get(&file_name) {
+      (file.date, file.seconds, file.note, file.status)
     } else {
       let ffprobe_info = ffmpeg::ffprobe(path)?;
       (
         datetime::approximate(path, &ffprobe_info)?.naive_local().date().to_string(),
-        None,
         ffprobe_info.seconds,
+        None,
+        None,
       )
     };
 
@@ -55,6 +56,7 @@ fn run(src_dir: &Path, event_sender: &Sender<Event>, cache: CacheEntry) -> Resul
       date,
       seconds,
       note,
+      status,
     })))?;
   }
 

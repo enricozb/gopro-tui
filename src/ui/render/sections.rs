@@ -5,7 +5,7 @@ use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState, Wrap},
+  widgets::{Block, Borders, Clear, Paragraph, Table, TableState, Wrap},
   Frame,
 };
 
@@ -80,13 +80,12 @@ impl<'a> Sections<'a> {
     );
 
     Table::new(rows::sessions(self.state))
-      .header(Row::new(vec!["date", "files", "size", "output"]).style(Style::default().add_modifier(Modifier::UNDERLINED)))
       .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(11),
-        Constraint::Length(6),
+        Constraint::Length(3),
         Constraint::Length(9),
-        Constraint::Length(10),
+        Constraint::Length(20),
       ])
   }
 
@@ -96,8 +95,9 @@ impl<'a> Sections<'a> {
     Table::new(rows::files(self.state))
       .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
-        Constraint::Length(12),
-        Constraint::Length(10),
+        Constraint::Length(2),
+        Constraint::Length(11),
+        Constraint::Length(9),
         Constraint::Length(5),
         Constraint::Length(31),
       ])
