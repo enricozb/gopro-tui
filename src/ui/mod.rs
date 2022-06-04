@@ -23,20 +23,20 @@ use self::{
   state::{focus::Focus, Popup, State},
 };
 use crate::{
-  cache::CacheEntry,
+  cache::Source as SourceCache,
   channel::{EventChannel, ResultChannel},
   error::Result,
 };
 
 pub struct Ui {
-  cache: CacheEntry,
+  cache: SourceCache,
   event_channel: EventChannel,
   state: State,
   terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
 impl Ui {
-  pub fn new(cache: CacheEntry, event_channel: EventChannel) -> Result<Self> {
+  pub fn new(cache: SourceCache, event_channel: EventChannel) -> Result<Self> {
     Ok(Self {
       cache,
       event_channel,
@@ -141,12 +141,12 @@ impl Drop for Ui {
   }
 }
 
-pub fn spawn(event_channel: EventChannel, result_channel: &ResultChannel, cache: CacheEntry) {
+pub fn spawn(event_channel: EventChannel, result_channel: &ResultChannel, cache: SourceCache) {
   let result_sender = result_channel.sender();
 
   thread::spawn(move || result_sender.send(run(cache, event_channel)).unwrap());
 }
 
-fn run(cache: CacheEntry, event_channel: EventChannel) -> Result<()> {
+fn run(cache: SourceCache, event_channel: EventChannel) -> Result<()> {
   Ui::new(cache, event_channel)?.run()
 }

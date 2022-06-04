@@ -1,73 +1,43 @@
+mod user;
 mod version;
 
-use std::{
-  collections::BTreeMap,
-  fs::{self, File as StdFile},
-  io::BufReader,
-  path::Path,
-};
+use std::{collections::BTreeMap, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use self::version::{SerialNumber, Version};
+use self::{
+  user::User,
+  version::{Local, SerialNumber, Version},
+};
 use crate::{
   dirs,
   error::Result,
+  mode::Mode,
   ui::state::session::{File as UiFile, Status as UiFileStatus},
 };
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 type FileName = String;
 
-#[derive(Serialize, Deserialize, Default)]
-struct Cache {
-  version: String,
-  entries: BTreeMap<SerialNumber, CacheEntry>,
-}
-
-impl Cache {
-  fn from(path: &Path) -> Result<Self> {
-    if path.exists() {
-      let file = StdFile::open(path)?;
-      let reader = BufReader::new(file);
-
-      Ok(serde_json::from_reader(reader)?)
-    } else {
-      Ok(Self {
-        version: VERSION.to_string(),
-        ..Self::default()
-      })
-    }
-  }
-
-  fn save(self, path: &Path) -> Result<()> {
-    let json = serde_json::to_string_pretty(&self)?;
-    Ok(fs::write(path, json)?)
-  }
-}
-
 #[derive(Serialize, Deserialize, Clone, Default)]
-pub struct CacheEntry {
+pub struct Source {
   #[serde(skip)]
   serial: SerialNumber,
 
   files: BTreeMap<FileName, File>,
 }
 
-impl CacheEntry {
-  pub fn from(gopro_path: &Path) -> Result<Self> {
-    let version = Version::from(gopro_path)?;
+impl Source {
+  pub fn from(input_dir: &Path, mode: Mode) -> Result<Self> {
+    let serial = match mode {
+      Mode::Importing => Version::from(input_dir)?.camera_serial_number,
+      Mode::Viewing => Local::from(input_dir)?.id.to_string(),
+    };
 
-    let mut cache_entry = Cache::from(&dirs::config_json()?)?
-      .entries
-      .get(&version.camera_serial_number)
-      .cloned()
-      .unwrap_or_default();
+    let mut user_cache = User::from(&dirs::config_json()?)?.sources.remove(&serial).unwrap_or_default();
 
-    cache_entry.serial = version.camera_serial_number;
+    user_cache.serial = serial;
 
-    Ok(cache_entry)
+    Ok(user_cache)
   }
 
   pub fn get(&self, file_name: &str) -> Option<File> {
@@ -89,8 +59,8 @@ impl CacheEntry {
   }
 
   pub fn save(&self) -> Result<()> {
-    let mut cache = Cache::from(&dirs::config_json()?)?;
-    cache.entries.insert(self.serial.clone(), self.clone());
+    let mut cache = User::from(&dirs::config_json()?)?;
+    cache.sources.insert(self.serial.clone(), self.clone());
     cache.save(&dirs::config_json()?)
   }
 }

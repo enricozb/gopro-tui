@@ -11,7 +11,7 @@ use std::{
 use walkdir::{DirEntry, WalkDir};
 
 use crate::{
-  cache::CacheEntry,
+  cache::Source as SourceCache,
   channel::{EventChannel, ResultChannel},
   error::Result,
   events::Event,
@@ -19,7 +19,7 @@ use crate::{
   utils,
 };
 
-pub fn spawn(src_dir: PathBuf, event_channel: &EventChannel, result_channel: &ResultChannel, cache: CacheEntry) {
+pub fn spawn(src_dir: PathBuf, event_channel: &EventChannel, result_channel: &ResultChannel, cache: SourceCache) {
   let event_sender = event_channel.sender();
   let result_sender = result_channel.sender();
 
@@ -29,7 +29,7 @@ pub fn spawn(src_dir: PathBuf, event_channel: &EventChannel, result_channel: &Re
   });
 }
 
-fn run(src_dir: &Path, event_sender: &Sender<Event>, cache: CacheEntry) -> Result<()> {
+fn run(src_dir: &Path, event_sender: &Sender<Event>, cache: SourceCache) -> Result<()> {
   for file in WalkDir::new(src_dir.join("DCIM")).into_iter().filter_map(std::result::Result::ok) {
     if !is_mp4(&file) {
       continue;

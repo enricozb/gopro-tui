@@ -3,8 +3,9 @@ mod cache;
 mod channel;
 mod dirs;
 mod error;
-mod importer;
+mod mode;
 mod mpv;
+mod reader;
 mod ui;
 mod utils;
 
@@ -12,9 +13,10 @@ use clap::Parser;
 
 use crate::{
   args::Args,
-  cache::CacheEntry,
+  cache::Source as SourceCache,
   channel::{EventChannel, ResultChannel},
   error::Result,
+  mode::Mode,
   ui::events,
 };
 
@@ -22,13 +24,21 @@ fn main() -> Result<()> {
   stable_eyre::install()?;
 
   let args = Args::parse();
-  let cache = CacheEntry::from(&args.src_dir)?;
+
+  let (input_dir, mode) = match args.input_dir {
+    Some(dir) => (dir, Mode::Importing),
+    None => (args.output_dir, Mode::Viewing),
+  };
+
+  let cache = SourceCache::from(&input_dir, mode)?;
 
   let event_channel = EventChannel::new();
   let result_channel = ResultChannel::new();
 
   events::spawn(&event_channel, &result_channel);
-  importer::spawn(args.src_dir, &event_channel, &result_channel, cache.clone());
+
+  // TODO(enricozb): don't clone the cache; Arc<Mutex<...>> it.
+  reader::spawn(input_dir, &event_channel, &result_channel, cache.clone());
 
   ui::spawn(event_channel, &result_channel, cache);
   result_channel.poll()??;

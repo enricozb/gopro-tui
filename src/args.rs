@@ -6,8 +6,9 @@ use clap::Parser;
 #[clap(version)]
 pub struct Args {
   /// Source directory for gopro files
-  pub src_dir: PathBuf,
+  #[clap(short, long)]
+  pub input_dir: Option<PathBuf>,
 
   /// Destination directory for categorized files
-  pub dst_dir: PathBuf,
+  pub output_dir: PathBuf,
 }
