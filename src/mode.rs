@@ -27,4 +27,11 @@ impl Mode {
       Mode::Importing { input_dir, .. } | Mode::Viewing { input_dir } => input_dir.clone(),
     }
   }
+
+  pub fn output_dir(&self) -> Option<PathBuf> {
+    match self {
+      Mode::Importing { output_dir, .. } => Some(output_dir.clone()),
+      Mode::Viewing { .. } => None,
+    }
+  }
 }

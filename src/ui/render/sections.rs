@@ -38,7 +38,7 @@ impl<'a> Sections<'a> {
 
     let left = Layout::default()
       .direction(Direction::Vertical)
-      .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+      .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
       .split(layout[0]);
 
     Self {
@@ -101,7 +101,8 @@ impl<'a> Sections<'a> {
   }
 
   fn destinations(&self) -> Table {
-    let title = "Destinations".to_string();
+    let title = self.state.mode.output_dir().unwrap_or_default().to_string_lossy().to_string();
+    let title = Span::styled(title, Style::default().fg(Color::Blue));
 
     Table::new(rows::destinations(self.state))
       .block(Block::default().title(title).borders(Borders::ALL))
