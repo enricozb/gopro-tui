@@ -254,7 +254,7 @@ impl State {
   pub fn write_note(&mut self) {
     if let Some(input) = self.input.clone() {
       if let Some(ref mut file) = self.file_mut() {
-        file.note = if input.len() > 0 { Some(input) } else { None };
+        file.note = if !input.is_empty() { Some(input) } else { None };
       }
     };
 
