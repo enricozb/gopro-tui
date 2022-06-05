@@ -185,7 +185,7 @@ pub fn files(state: &State) -> Vec<Row<'_>> {
 // destinations computes a tree-like view of rows showing the destination directories.
 // this can't be in an implementation of rowable because state must be tracked while
 // iterating directories to build the tree-like view.
-pub fn destinations(state: &State) -> Vec<Row<'_>> {
+pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
   struct DestRow<'a> {
     path: &'a PathBuf,
     file_name: String,
@@ -233,10 +233,10 @@ pub fn destinations(state: &State) -> Vec<Row<'_>> {
 
       let (section_sep, prefix_tail) = if dest.is_last { ("   ", " └─") } else { (" │ ", " ├─") };
 
-      rows.push(Row::new(vec![Cell::from(Spans::from(vec![
+      rows.push(vec![Spans::from(vec![
         Span::raw(format!("{}{} ", prefix.join(""), prefix_tail)),
         Span::styled(dest.file_name, Style::default().fg(colors.destination)),
-      ]))]));
+      ])]);
 
       if let Some(destinations) = state.destinations.get(dest.path) {
         extend_stack(&mut stack, destinations, dest.depth + 1);

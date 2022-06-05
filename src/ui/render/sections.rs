@@ -5,13 +5,14 @@ use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Block, Borders, Clear, Paragraph, Table, TableState, Wrap},
+  widgets::{Block, Borders, Clear, Paragraph, Table as TuiTable, TableState, Wrap},
   Frame,
 };
 
 use super::{
   super::state::{focus::Focus, State},
   rows,
+  table::Table,
 };
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
@@ -64,7 +65,8 @@ impl<'a> Sections<'a> {
 
     frame.render_stateful_widget(self.sessions(), self.sessions, &mut self.sessions_state());
     frame.render_stateful_widget(self.files(), self.files, &mut self.files_state());
-    frame.render_widget(self.destinations(), self.destinations);
+
+    self.render_destinations(frame);
 
     if let Some(error) = &self.state.error {
       frame.render_widget(Clear, self.popup);
@@ -89,10 +91,10 @@ impl<'a> Sections<'a> {
     }
   }
 
-  fn sessions(&self) -> Table {
+  fn sessions(&self) -> TuiTable {
     let (title, border_style) = border_style(&[Some("Sessions")], self.state.focus == Focus::Sessions);
 
-    Table::new(rows::sessions(self.state))
+    TuiTable::new(rows::sessions(self.state))
       .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(11),
@@ -103,10 +105,10 @@ impl<'a> Sections<'a> {
       ])
   }
 
-  fn files(&self) -> Table {
+  fn files(&self) -> TuiTable {
     let (title, border_style) = border_style(&[Some("Files")], self.state.focus == Focus::Files);
 
-    Table::new(rows::files(self.state))
+    TuiTable::new(rows::files(self.state))
       .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(2),
@@ -117,13 +119,12 @@ impl<'a> Sections<'a> {
       ])
   }
 
-  fn destinations(&self) -> Table {
+  fn render_destinations(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
     let title = self.state.mode.output_dir().unwrap_or_default().to_string_lossy().to_string();
-    let title = Span::styled(title, Style::default().fg(Color::Blue));
+    let table = Table::new(rows::destinations(self.state)).title(title);
+    let constraints = table.constraints();
 
-    Table::new(rows::destinations(self.state))
-      .block(Block::default().title(title).borders(Borders::ALL))
-      .widths(&[Constraint::Percentage(80), Constraint::Percentage(20)])
+    frame.render_widget(table.widget(&constraints), self.destinations);
   }
 
   fn input(&self, input: String) -> Paragraph {
@@ -148,8 +149,8 @@ impl<'a> Sections<'a> {
       .style(Style::default().fg(Color::White))
   }
 
-  fn search_results(&self, input: String) -> Table {
-    Table::new(rows::search_matches(self.state, input))
+  fn search_results(&self, input: String) -> TuiTable {
+    TuiTable::new(rows::search_matches(self.state, input))
       .block(
         Block::default()
           .borders(Borders::ALL)
