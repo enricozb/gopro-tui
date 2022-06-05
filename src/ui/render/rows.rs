@@ -160,7 +160,9 @@ pub fn files(state: &State) -> Vec<Row<'_>> {
   }
 }
 
-// destinations computes a tree-like vector of rows showing the destination directories.
+// destinations computes a tree-like view of rows showing the destination directories.
+// this can't be in an implementation of rowable because state must be tracked while
+// iterating directories to build the tree-like view.
 pub fn destinations(state: &State) -> Vec<Row<'_>> {
   struct DestRow<'a> {
     path: &'a PathBuf,

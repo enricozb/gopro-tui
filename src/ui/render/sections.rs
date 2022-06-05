@@ -93,10 +93,10 @@ impl<'a> Sections<'a> {
       .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(2),
-        Constraint::Length(11),
+        Constraint::Length(12),
         Constraint::Length(9),
         Constraint::Length(5),
-        Constraint::Length(31),
+        Constraint::Length(64),
       ])
   }
 
@@ -141,7 +141,7 @@ impl<'a> Sections<'a> {
   }
 
   fn input_rect(frame: Rect) -> Rect {
-    let (width, height) = (50, 3);
+    let (width, height) = (67, 3);
 
     Rect {
       x: frame.width / 2 - width / 2,

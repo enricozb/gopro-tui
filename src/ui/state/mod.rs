@@ -127,14 +127,16 @@ impl State {
   }
 
   pub fn input_char(&mut self, c: char) {
-    if let Some(s) = self.input.as_mut() {
-      s.push(c);
+    if let Some(input) = self.input.as_mut() {
+      if input.len() < 64 {
+        input.push(c);
+      }
     }
   }
 
   pub fn input_del(&mut self) {
-    if let Some(s) = self.input.as_mut() {
-      s.pop();
+    if let Some(input) = self.input.as_mut() {
+      input.pop();
     }
   }
 
