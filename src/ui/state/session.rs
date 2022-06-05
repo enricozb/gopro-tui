@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, fs::Metadata, iter, path::PathBuf, time::System
 
 use serde::{Deserialize, Serialize};
 
+use super::destination::Destination;
 use crate::{error::Result, utils};
 
 pub type Date = String;
@@ -10,15 +11,19 @@ pub type Date = String;
 pub struct Session {
   pub date: Date,
   pub files: BTreeMap<SystemTime, File>,
+
+  pub destination: Option<Destination>,
 }
 
 impl Session {
-  pub fn new(date: Date, files: Vec<File>) -> Result<Self> {
+  pub fn new(date: Date, files: Vec<File>, destination: Option<Destination>) -> Result<Self> {
     let times: Result<Vec<_>> = files.iter().map(File::time).collect();
 
     Ok(Self {
       date,
       files: iter::zip(times?, files).collect(),
+
+      destination,
     })
   }
 

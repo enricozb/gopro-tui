@@ -99,6 +99,7 @@ impl<'a> Sections<'a> {
         Constraint::Length(6),
         Constraint::Length(9),
         Constraint::Length(20),
+        Constraint::Length(64),
       ])
   }
 

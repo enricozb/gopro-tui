@@ -12,6 +12,7 @@ use self::{
   focus::Focus,
   session::{Date, File, Session, Status},
 };
+use super::render::search;
 use crate::{error::Result, mode::Mode, mpv::Player};
 
 pub struct State {
@@ -73,6 +74,10 @@ impl State {
     self.session().map_or(0, |session| session.files.len())
   }
 
+  pub fn destinations(&self) -> impl Iterator<Item = &Destination> {
+    self.destinations.values().flat_map(BTreeSet::iter)
+  }
+
   pub fn popup(&self) -> Popup {
     match (&self.input, &self.search, &self.error) {
       (Some(_), _, _) => Popup::Input,
@@ -82,13 +87,13 @@ impl State {
     }
   }
 
-  pub fn add_file(&mut self, file: File) -> Result<()> {
+  pub fn add_file(&mut self, file: File, destination: Option<Destination>) -> Result<()> {
     match self.sessions.get_mut(&file.date) {
       Some(session) => session.insert_file(file)?,
       None => {
         self
           .sessions
-          .insert(file.date.clone(), Session::new(file.date.clone(), vec![file])?);
+          .insert(file.date.clone(), Session::new(file.date.clone(), vec![file], destination)?);
       }
     };
 
@@ -129,10 +134,6 @@ impl State {
     self.input = self.file().and_then(|f| f.note.clone()).or_else(|| Some("".to_string()));
   }
 
-  pub fn search(&mut self) {
-    self.search = Some("".to_string());
-  }
-
   pub fn input_char(&mut self, c: char) {
     if let Some(input) = self.input.as_mut() {
       if input.len() < 64 {
@@ -145,6 +146,10 @@ impl State {
     if let Some(input) = self.input.as_mut() {
       input.pop();
     }
+  }
+
+  pub fn search(&mut self) {
+    self.search = Some("".to_string());
   }
 
   pub fn search_char(&mut self, c: char) {
@@ -161,6 +166,22 @@ impl State {
     }
   }
 
+  pub fn set_session_destination(&mut self) {
+    if let Some(search) = self.search.clone() {
+      let destination = if let Some(search_match) = search::sorted(search, self.destinations()).get(0) {
+        search_match.destination.clone()
+      } else {
+        return;
+      };
+
+      if let Some(session) = self.session_mut() {
+        session.destination = Some(destination);
+      }
+    }
+
+    self.search = None;
+  }
+
   pub fn error(&mut self, error: String) {
     self.error = Some(error);
   }
@@ -172,7 +193,7 @@ impl State {
     }
   }
 
-  pub fn enter(&mut self) -> Result<()> {
+  pub fn preview_file(&mut self) -> Result<()> {
     if let Some(session) = self.session().cloned() {
       self.player.load_session(&session)?;
       self.player.play(self.file_idx)?;
@@ -233,7 +254,7 @@ impl State {
   pub fn write_note(&mut self) {
     if let Some(input) = self.input.clone() {
       if let Some(ref mut file) = self.file_mut() {
-        file.note = Some(input);
+        file.note = if input.len() > 0 { Some(input) } else { None };
       }
     };
 

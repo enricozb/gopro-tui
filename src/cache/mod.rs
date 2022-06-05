@@ -13,7 +13,10 @@ use crate::{
   dirs,
   error::Result,
   mode::Mode,
-  ui::state::session::{File as UiFile, Status as UiFileStatus},
+  ui::state::{
+    destination::Destination,
+    session::{Date, File as UiFile, Session as UiSession, Status as UiFileStatus},
+  },
 };
 
 type FileName = String;
@@ -24,6 +27,7 @@ pub struct Source {
   serial: SerialNumber,
 
   files: BTreeMap<FileName, File>,
+  session_destinations: BTreeMap<Date, Destination>,
 }
 
 impl Source {
@@ -56,6 +60,16 @@ impl Source {
     );
 
     Ok(())
+  }
+
+  pub fn get_session_destination(&self, date: &Date) -> Option<Destination> {
+    self.session_destinations.get(date).cloned()
+  }
+
+  pub fn set_session_destination(&mut self, session: &UiSession) {
+    if let Some(destination) = &session.destination {
+      self.session_destinations.insert(session.date.clone(), destination.clone());
+    }
   }
 
   pub fn save(&self) -> Result<()> {

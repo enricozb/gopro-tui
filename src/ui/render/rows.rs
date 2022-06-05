@@ -103,6 +103,8 @@ impl<'a> Rowable<'a> for Session {
         colors.status_none,
       ))
       .style(Style::default().add_modifier(modifier)),
+      Cell::from(self.destination.as_ref().map_or("".to_string(), |d| d.rel.clone()))
+        .style(Style::default().fg(colors.destination).add_modifier(modifier)),
     ])
   }
 }
@@ -247,16 +249,10 @@ pub fn destinations(state: &State) -> Vec<Row<'_>> {
 }
 
 pub fn search_matches(state: &State, search: String) -> Vec<Row<'_>> {
-  let mut matches: Vec<_> = state
-    .destinations
-    .values()
-    .flat_map(|destinations| destinations.iter())
-    .filter_map(|d| search::score(&search, d))
-    .collect();
-
-  matches.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-
-  matches.into_iter().map(|search_match| search_match.row(false, false)).collect()
+  search::sorted(search, state.destinations())
+    .into_iter()
+    .map(|search_match| search_match.row(false, false))
+    .collect()
 }
 
 fn size_split(session: &Session) -> (u64, u64) {

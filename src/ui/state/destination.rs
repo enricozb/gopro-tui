@@ -1,8 +1,10 @@
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{error::Result, utils};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub struct Destination {
   pub abs: PathBuf,
   pub rel: String,

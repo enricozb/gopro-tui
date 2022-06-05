@@ -13,3 +13,13 @@ pub fn score<S: AsRef<str>>(search: S, destination: &Destination) -> Option<Matc
     score,
   })
 }
+
+pub fn sorted<'a, I, S: AsRef<str>>(search: S, destinations: I) -> Vec<Match<'a>>
+where
+  I: Iterator<Item = &'a Destination>,
+{
+  let mut matches: Vec<_> = destinations.filter_map(|d| score(&search, d)).collect();
+  matches.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+  matches
+}

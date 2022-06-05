@@ -71,13 +71,17 @@ impl Ui {
         }
         (Focus::Files, Popup::None, Event::Key { code: Char('n'), .. }) => self.state.input(),
         (Focus::Files, Popup::None, Event::Key { code: Enter, .. }) => {
-          if let Err(error) = self.state.enter() {
+          if let Err(error) = self.state.preview_file() {
             self.event_channel.sender.send(Event::Error(format!("{:?}", error)))?;
           }
         }
 
         (_, Popup::Search, Event::Key { code: Char(c), .. }) => self.state.search_char(c),
         (_, Popup::Search, Event::Key { code: Backspace, .. }) => self.state.search_del(),
+        (_, Popup::Search, Event::Key { code: Enter, .. }) => {
+          self.state.set_session_destination();
+          self.update_session_destination_cache()?;
+        }
 
         (_, Popup::Input, Event::Key { code: Char(c), .. }) => self.state.input_char(c),
         (_, Popup::Input, Event::Key { code: Backspace, .. }) => self.state.input_del(),
@@ -89,8 +93,10 @@ impl Ui {
         (_, _, Event::Key { code: Esc, .. }) => self.state.escape(),
 
         (_, _, Event::File(file)) => {
+          let destination = self.cache.get_session_destination(&file.date);
+
           self.cache.set(&file)?;
-          self.state.add_file(*file)?;
+          self.state.add_file(*file, destination)?;
           self.cache.save()?;
         }
 
@@ -112,6 +118,15 @@ impl Ui {
   fn update_file_cache(&mut self) -> Result<()> {
     if let Some(file) = self.state.file() {
       self.cache.set(file)?;
+      self.cache.save()?;
+    };
+
+    Ok(())
+  }
+
+  fn update_session_destination_cache(&mut self) -> Result<()> {
+    if let Some(session) = self.state.session() {
+      self.cache.set_session_destination(session);
       self.cache.save()?;
     };
 
