@@ -9,11 +9,7 @@ use tui::{
   Frame,
 };
 
-use super::{
-  super::state::State,
-  rows,
-  table::{Alignment, Table},
-};
+use super::{super::state::State, rows, table::Table};
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
   Sections::new(frame.size(), state).render(frame);
@@ -90,26 +86,22 @@ impl<'a> Sections<'a> {
   }
 
   fn render_sessions(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
-    let table = Table::new(rows::sessions(self.state)).title("Sessions").alignments([
-      Alignment::Left,
-      Alignment::Left,
-      Alignment::Right,
-      Alignment::Right,
-      Alignment::Left,
-    ]);
+    use super::table::Alignment::{Left, Right};
+
+    let table = Table::new(rows::sessions(self.state))
+      .title("Sessions")
+      .alignments([Left, Left, Right, Right, Left]);
     let constraints = table.constraints();
 
     frame.render_stateful_widget(table.widget(&constraints), self.sessions, &mut self.sessions_state());
   }
 
   fn render_files(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
-    let table = Table::new(rows::files(self.state)).title("Files").alignments([
-      Alignment::Left,
-      Alignment::Left,
-      Alignment::Right,
-      Alignment::Right,
-      Alignment::Left,
-    ]);
+    use super::table::Alignment::{Left, Right};
+
+    let table = Table::new(rows::files(self.state))
+      .title("Files")
+      .alignments([Left, Left, Right, Right, Left]);
     let constraints = table.constraints();
 
     frame.render_stateful_widget(table.widget(&constraints), self.files, &mut self.files_state());
