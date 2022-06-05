@@ -178,16 +178,12 @@ pub fn destinations(state: &State) -> Vec<Row<'_>> {
         .iter()
         .enumerate()
         .filter_map(|(i, d)| {
-          if let Some(file_name) = d.abs.file_name().map(|f| f.to_string_lossy().to_string()) {
-            Some(DestRow {
-              path: &d.abs,
-              file_name,
-              depth,
-              is_last: (i + 1) == len,
-            })
-          } else {
-            None
-          }
+          d.abs.file_name().map(|f| f.to_string_lossy().to_string()).map(|file_name| DestRow {
+            path: &d.abs,
+            file_name,
+            depth,
+            is_last: (i + 1) == len,
+          })
         })
         .rev(),
     );
