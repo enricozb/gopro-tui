@@ -36,7 +36,7 @@ fn run(output_dir: &Path, event_sender: &Sender<Event>) -> Result<()> {
       continue;
     }
 
-    event_sender.send(Event::Destination(Destination::new(file.path())?))?;
+    event_sender.send(Event::Destination(Destination::new(file.path(), output_dir)?))?;
   }
 
   Ok(())

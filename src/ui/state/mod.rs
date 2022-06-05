@@ -19,6 +19,7 @@ pub struct State {
 
   pub focus: Focus,
   pub input: Option<String>,
+  pub search: Option<String>,
   pub error: Option<String>,
 
   pub sessions: BTreeMap<Date, Session>,
@@ -37,6 +38,7 @@ impl State {
 
       focus: Focus::default(),
       input: None,
+      search: None,
       error: None,
 
       sessions: BTreeMap::new(),
@@ -72,9 +74,10 @@ impl State {
   }
 
   pub fn popup(&self) -> Popup {
-    match (&self.input, &self.error) {
-      (Some(_), None) => Popup::Input,
-      (None, Some(_)) => Popup::Error,
+    match (&self.input, &self.search, &self.error) {
+      (Some(_), _, _) => Popup::Input,
+      (_, Some(_), _) => Popup::Search,
+      (_, _, Some(_)) => Popup::Error,
       _ => Popup::None,
     }
   }
@@ -126,6 +129,10 @@ impl State {
     self.input = self.file().and_then(|f| f.note.clone()).or_else(|| Some("".to_string()));
   }
 
+  pub fn search(&mut self) {
+    self.search = Some("".to_string());
+  }
+
   pub fn input_char(&mut self, c: char) {
     if let Some(input) = self.input.as_mut() {
       if input.len() < 64 {
@@ -137,6 +144,20 @@ impl State {
   pub fn input_del(&mut self) {
     if let Some(input) = self.input.as_mut() {
       input.pop();
+    }
+  }
+
+  pub fn search_char(&mut self, c: char) {
+    if let Some(search) = self.search.as_mut() {
+      if search.len() < 64 {
+        search.push(c);
+      }
+    }
+  }
+
+  pub fn search_del(&mut self) {
+    if let Some(search) = self.search.as_mut() {
+      search.pop();
     }
   }
 
@@ -162,6 +183,7 @@ impl State {
 
   pub fn escape(&mut self) {
     self.input = None;
+    self.search = None;
     self.error = None;
   }
 
@@ -245,6 +267,7 @@ impl State {
 pub enum Popup {
   None,
   Input,
+  Search,
   Error,
 }
 

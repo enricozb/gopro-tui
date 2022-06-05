@@ -24,6 +24,8 @@ struct Sections<'a> {
   destinations: Rect,
 
   input: Rect,
+  search: Rect,
+  search_results: Rect,
   popup: Rect,
 
   state: &'a State,
@@ -41,12 +43,16 @@ impl<'a> Sections<'a> {
       .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
       .split(layout[0]);
 
+    let (search, search_results) = Sections::search_rects(frame);
+
     Self {
       sessions: left[0],
       files: left[1],
       destinations: layout[1],
 
       input: Sections::input_rect(frame),
+      search,
+      search_results,
       popup: Sections::popup_rect(frame),
 
       state,
@@ -70,6 +76,16 @@ impl<'a> Sections<'a> {
       frame.render_widget(self.input(input.clone()), self.input);
 
       frame.set_cursor(self.input.x + input.chars().count() as u16 + 1, self.input.y + 1);
+    }
+
+    if let Some(search) = &self.state.search {
+      frame.render_widget(Clear, self.search);
+      frame.render_widget(self.search(search.clone()), self.search);
+
+      frame.render_widget(Clear, self.search_results);
+      frame.render_widget(self.search_results(search.clone()), self.search_results);
+
+      frame.set_cursor(self.search.x + search.chars().count() as u16 + 1, self.search.y + 1);
     }
   }
 
@@ -120,6 +136,27 @@ impl<'a> Sections<'a> {
       .style(Style::default().fg(Color::White))
   }
 
+  fn search(&self, input: String) -> Paragraph {
+    Paragraph::new(Span::raw(input))
+      .block(
+        Block::default()
+          .title("Destination")
+          .borders(Borders::ALL)
+          .border_style(Style::default().fg(Color::Green)),
+      )
+      .style(Style::default().fg(Color::White))
+  }
+
+  fn search_results(&self, input: String) -> Table {
+    Table::new(rows::search_matches(self.state, input))
+      .block(
+        Block::default()
+          .borders(Borders::ALL)
+          .border_style(Style::default().fg(Color::Green)),
+      )
+      .widths(&[Constraint::Percentage(100)])
+  }
+
   fn popup(&self, error: String) -> Paragraph {
     Paragraph::new(error)
       .block(Block::default().title("Error").borders(Borders::ALL))
@@ -150,6 +187,32 @@ impl<'a> Sections<'a> {
       width,
       height,
     }
+  }
+
+  fn search_rects(frame: Rect) -> (Rect, Rect) {
+    const INPUT_HEIGHT: u16 = 3;
+
+    let search_layout = Layout::default()
+      .direction(Direction::Vertical)
+      .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)].as_ref())
+      .split(frame);
+
+    let rect = Layout::default()
+      .direction(Direction::Horizontal)
+      .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)].as_ref())
+      .split(search_layout[1])[1];
+
+    let search = Rect {
+      height: INPUT_HEIGHT,
+      ..rect
+    };
+    let results = Rect {
+      y: rect.y + INPUT_HEIGHT,
+      height: rect.height - INPUT_HEIGHT,
+      ..rect
+    };
+
+    (search, results)
   }
 
   fn popup_rect(frame: Rect) -> Rect {

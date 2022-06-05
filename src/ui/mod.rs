@@ -53,32 +53,34 @@ impl Ui {
       self.render()?;
 
       match (&self.state.focus, &self.state.popup(), self.event_channel.poll()?) {
-        (_, Popup::Input, Event::Key { code: Char(c), .. }) => self.state.input_char(c),
-        (_, Popup::Input, Event::Key { code: Backspace, .. }) => self.state.input_del(),
-
         (_, Popup::None, Event::Key { code: Char('q'), .. }) => break,
-
-        (_, Popup::None, Event::Key { code: Char('a'), .. }) => {
-          self.state.toggle_file_import();
-          self.update_file_cache()?;
-        }
-        (_, Popup::None, Event::Key { code: Char('d'), .. }) => {
-          self.state.toggle_file_ignore();
-          self.update_file_cache()?;
-        }
 
         (_, Popup::None, Event::Key { code: Char('k'), .. }) => self.state.list_up(),
         (_, Popup::None, Event::Key { code: Char('j'), .. }) => self.state.list_down(),
         (_, Popup::None, Event::Key { code: Char('h' | 'l'), .. }) => self.state.toggle_focus(),
 
-        (Focus::Files, Popup::None, Event::Key { code: Char('n'), .. }) => self.state.input(),
+        (Focus::Sessions, Popup::None, Event::Key { code: Char('n'), .. }) => self.state.search(),
 
+        (Focus::Files, Popup::None, Event::Key { code: Char('a'), .. }) => {
+          self.state.toggle_file_import();
+          self.update_file_cache()?;
+        }
+        (Focus::Files, Popup::None, Event::Key { code: Char('d'), .. }) => {
+          self.state.toggle_file_ignore();
+          self.update_file_cache()?;
+        }
+        (Focus::Files, Popup::None, Event::Key { code: Char('n'), .. }) => self.state.input(),
         (Focus::Files, Popup::None, Event::Key { code: Enter, .. }) => {
           if let Err(error) = self.state.enter() {
             self.event_channel.sender.send(Event::Error(format!("{:?}", error)))?;
           }
         }
 
+        (_, Popup::Search, Event::Key { code: Char(c), .. }) => self.state.search_char(c),
+        (_, Popup::Search, Event::Key { code: Backspace, .. }) => self.state.search_del(),
+
+        (_, Popup::Input, Event::Key { code: Char(c), .. }) => self.state.input_char(c),
+        (_, Popup::Input, Event::Key { code: Backspace, .. }) => self.state.input_del(),
         (_, Popup::Input, Event::Key { code: Enter, .. }) => {
           self.state.write_note();
           self.update_file_cache()?;

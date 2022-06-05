@@ -6,6 +6,7 @@ use tui::{
   widgets::{Cell, Row},
 };
 
+use super::search::{self, Match};
 use crate::{
   mode::Mode,
   ui::state::{
@@ -21,7 +22,7 @@ struct Colors {
   count: Color,
   size: Color,
   duration: Color,
-  path: Color,
+  filename: Color,
   destination: Color,
   status_import: Color,
   status_ignore: Color,
@@ -35,7 +36,7 @@ impl Colors {
       Color::Gray,    // count
       Color::Yellow,  // size
       Color::Green,   // duration
-      Color::Gray,    // path
+      Color::Gray,    // filename
       Color::Blue,    // destination
       Color::Green,   // status_import
       Color::Red,     // status_ignore
@@ -53,7 +54,7 @@ impl Colors {
       count: colors[1],
       size: colors[2],
       duration: colors[3],
-      path: colors[4],
+      filename: colors[4],
       destination: colors[5],
       status_import: colors[6],
       status_ignore: colors[7],
@@ -122,7 +123,7 @@ impl<'a> Rowable<'a> for File {
       Span::styled(format!(" {}", status), Style::default().fg(status_color).add_modifier(modifier)),
       Span::styled(
         self.path.file_name().unwrap().to_string_lossy().into_owned(),
-        Style::default().fg(colors.path).add_modifier(modifier),
+        Style::default().fg(colors.filename).add_modifier(modifier),
       ),
       Span::styled(
         format!("{:>9}", human_readable_size(self.metadata.len())),
@@ -134,9 +135,28 @@ impl<'a> Rowable<'a> for File {
       ),
       Span::styled(
         format!(" {}", self.note.as_deref().unwrap_or("")),
-        Style::default().fg(colors.path).add_modifier(modifier),
+        Style::default().fg(colors.filename).add_modifier(modifier),
       ),
     ])
+  }
+}
+
+impl<'a> Rowable<'a> for Match<'a> {
+  fn row(&self, selected: bool, focused: bool) -> Row<'a> {
+    let colors = Colors::new(selected && focused);
+
+    let mut spans: Vec<_> = self
+      .destination
+      .rel
+      .chars()
+      .map(|c| Span::styled(c.to_string(), Style::default().fg(colors.destination)))
+      .collect();
+
+    for position in &self.positions {
+      spans[*position].style = spans[*position].style.add_modifier(Modifier::UNDERLINED);
+    }
+
+    Row::new(vec![Cell::from(Spans::from(spans))])
   }
 }
 
@@ -224,6 +244,19 @@ pub fn destinations(state: &State) -> Vec<Row<'_>> {
   }
 
   rows
+}
+
+pub fn search_matches(state: &State, search: String) -> Vec<Row<'_>> {
+  let mut matches: Vec<_> = state
+    .destinations
+    .values()
+    .flat_map(|destinations| destinations.iter())
+    .filter_map(|d| search::score(&search, d))
+    .collect();
+
+  matches.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+  matches.into_iter().map(|search_match| search_match.row(false, false)).collect()
 }
 
 fn size_split(session: &Session) -> (u64, u64) {
