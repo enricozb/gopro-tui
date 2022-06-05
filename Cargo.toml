@@ -8,6 +8,7 @@ chrono = "0.4.19"
 clap = { version = "3.1.8", features = ["derive"] }
 crossterm = "0.23"
 directories = "4.0"
+itertools = "0.10.3"
 mpvipc = "1.1.9"
 nom = "7.1.1"
 regex = "1.5.6"

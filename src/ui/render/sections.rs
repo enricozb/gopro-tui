@@ -5,14 +5,14 @@ use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Block, Borders, Clear, Paragraph, Table as TuiTable, TableState, Wrap},
+  widgets::{Block, Borders, Clear, Paragraph, TableState, Wrap},
   Frame,
 };
 
 use super::{
-  super::state::{focus::Focus, State},
+  super::state::State,
   rows,
-  table::Table,
+  table::{Alignment, Table},
 };
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
@@ -63,9 +63,8 @@ impl<'a> Sections<'a> {
   pub fn render(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
     frame.render_widget(Clear, frame.size());
 
-    frame.render_stateful_widget(self.sessions(), self.sessions, &mut self.sessions_state());
-    frame.render_stateful_widget(self.files(), self.files, &mut self.files_state());
-
+    self.render_sessions(frame);
+    self.render_files(frame);
     self.render_destinations(frame);
 
     if let Some(error) = &self.state.error {
@@ -84,39 +83,36 @@ impl<'a> Sections<'a> {
       frame.render_widget(Clear, self.search);
       frame.render_widget(self.search(search.clone()), self.search);
 
-      frame.render_widget(Clear, self.search_results);
-      frame.render_widget(self.search_results(search.clone()), self.search_results);
+      self.render_search_results(search, frame);
 
       frame.set_cursor(self.search.x + search.chars().count() as u16 + 1, self.search.y + 1);
     }
   }
 
-  fn sessions(&self) -> TuiTable {
-    let (title, border_style) = border_style(&[Some("Sessions")], self.state.focus == Focus::Sessions);
+  fn render_sessions(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
+    let table = Table::new(rows::sessions(self.state)).title("Sessions").alignments([
+      Alignment::Left,
+      Alignment::Left,
+      Alignment::Right,
+      Alignment::Right,
+      Alignment::Left,
+    ]);
+    let constraints = table.constraints();
 
-    TuiTable::new(rows::sessions(self.state))
-      .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
-      .widths(&[
-        Constraint::Length(11),
-        Constraint::Length(6),
-        Constraint::Length(9),
-        Constraint::Length(20),
-        Constraint::Length(64),
-      ])
+    frame.render_stateful_widget(table.widget(&constraints), self.sessions, &mut self.sessions_state());
   }
 
-  fn files(&self) -> TuiTable {
-    let (title, border_style) = border_style(&[Some("Files")], self.state.focus == Focus::Files);
+  fn render_files(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
+    let table = Table::new(rows::files(self.state)).title("Files").alignments([
+      Alignment::Left,
+      Alignment::Left,
+      Alignment::Right,
+      Alignment::Right,
+      Alignment::Left,
+    ]);
+    let constraints = table.constraints();
 
-    TuiTable::new(rows::files(self.state))
-      .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
-      .widths(&[
-        Constraint::Length(2),
-        Constraint::Length(12),
-        Constraint::Length(9),
-        Constraint::Length(5),
-        Constraint::Length(64),
-      ])
+    frame.render_stateful_widget(table.widget(&constraints), self.files, &mut self.files_state());
   }
 
   fn render_destinations(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
@@ -149,14 +145,12 @@ impl<'a> Sections<'a> {
       .style(Style::default().fg(Color::White))
   }
 
-  fn search_results(&self, input: String) -> TuiTable {
-    TuiTable::new(rows::search_matches(self.state, input))
-      .block(
-        Block::default()
-          .borders(Borders::ALL)
-          .border_style(Style::default().fg(Color::Green)),
-      )
-      .widths(&[Constraint::Percentage(100)])
+  fn render_search_results<S: AsRef<str>>(&self, input: S, frame: &mut Frame<CrosstermBackend<Stdout>>) {
+    let table = Table::new(rows::search_matches(self.state, input));
+    let constraints = table.constraints();
+
+    frame.render_widget(Clear, self.search_results);
+    frame.render_widget(table.widget(&constraints), self.search_results);
   }
 
   fn popup(&self, error: String) -> Paragraph {

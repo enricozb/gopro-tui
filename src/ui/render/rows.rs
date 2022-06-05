@@ -3,7 +3,6 @@ use std::{collections::BTreeSet, os::unix::fs::MetadataExt, path::PathBuf};
 use tui::{
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Cell, Row},
 };
 
 use super::search::{self, Match};
@@ -76,41 +75,38 @@ impl Colors {
 }
 
 trait Rowable<'a> {
-  fn row(&self, selected: bool, focused: bool) -> Row<'a>;
+  fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>>;
 }
 
 impl<'a> Rowable<'a> for Session {
-  fn row(&self, selected: bool, focused: bool) -> Row<'a> {
+  fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>> {
     let modifier = if selected { Modifier::BOLD } else { Modifier::empty() };
 
     let colors = Colors::new(selected && focused);
 
     let (import_size, uncategorized_size) = size_split(self);
 
-    Row::new(vec![
-      Cell::from(self.date.clone()).style(Style::default().fg(colors.date).add_modifier(modifier)),
-      Cell::from(human_readable_file_counts(self.files.values(), colors.count, colors.status_import))
-        .style(Style::default().add_modifier(modifier)),
-      Cell::from(format!(
-        "{:>8}",
-        human_readable_size(self.files.values().map(|f| f.metadata.size()).sum::<u64>())
-      ))
-      .style(Style::default().fg(colors.size).add_modifier(modifier)),
-      Cell::from(human_readable_size_split(
-        import_size,
-        uncategorized_size,
-        colors.status_import,
-        colors.status_none,
-      ))
-      .style(Style::default().add_modifier(modifier)),
-      Cell::from(self.destination.as_ref().map_or("".to_string(), |d| d.rel.clone()))
-        .style(Style::default().fg(colors.destination).add_modifier(modifier)),
-    ])
+    vec![
+      Spans::from(Span::styled(
+        self.date.clone(),
+        Style::default().fg(colors.date).add_modifier(modifier),
+      )),
+      human_readable_file_counts(self.files.values(), colors.count, colors.status_import),
+      Spans::from(Span::styled(
+        human_readable_size(self.files.values().map(|f| f.metadata.size()).sum::<u64>()),
+        Style::default().fg(colors.size).add_modifier(modifier),
+      )),
+      human_readable_size_split(import_size, uncategorized_size, colors.status_import, colors.status_none),
+      Spans::from(Span::styled(
+        self.destination.as_ref().map_or("".to_string(), |d| d.rel.clone()),
+        Style::default().fg(colors.destination).add_modifier(modifier),
+      )),
+    ]
   }
 }
 
 impl<'a> Rowable<'a> for File {
-  fn row(&self, selected: bool, focused: bool) -> Row<'a> {
+  fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>> {
     let modifier = if selected { Modifier::BOLD } else { Modifier::empty() };
 
     let colors = Colors::new(selected && focused);
@@ -121,30 +117,33 @@ impl<'a> Rowable<'a> for File {
       Some(Status::Ignore) => ("-", colors.status_ignore),
     };
 
-    Row::new(vec![
-      Span::styled(format!(" {}", status), Style::default().fg(status_color).add_modifier(modifier)),
-      Span::styled(
+    vec![
+      Spans::from(Span::styled(
+        format!(" {}", status),
+        Style::default().fg(status_color).add_modifier(modifier),
+      )),
+      Spans::from(Span::styled(
         self.path.file_name().unwrap().to_string_lossy().into_owned(),
         Style::default().fg(colors.filename).add_modifier(modifier),
-      ),
-      Span::styled(
-        format!("{:>9}", human_readable_size(self.metadata.len())),
+      )),
+      Spans::from(Span::styled(
+        human_readable_size(self.metadata.len()),
         Style::default().fg(colors.size).add_modifier(modifier),
-      ),
-      Span::styled(
-        format!("{:>5}", human_readable_seconds(self.seconds as i64)),
+      )),
+      Spans::from(Span::styled(
+        human_readable_seconds(self.seconds as i64),
         Style::default().fg(colors.duration).add_modifier(modifier),
-      ),
-      Span::styled(
-        format!(" {}", self.note.as_deref().unwrap_or("")),
+      )),
+      Spans::from(Span::styled(
+        self.note.clone().unwrap_or("".to_string()),
         Style::default().fg(colors.filename).add_modifier(modifier),
-      ),
-    ])
+      )),
+    ]
   }
 }
 
 impl<'a> Rowable<'a> for Match<'a> {
-  fn row(&self, selected: bool, focused: bool) -> Row<'a> {
+  fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>> {
     let colors = Colors::new(selected && focused);
 
     let mut spans: Vec<_> = self
@@ -158,11 +157,11 @@ impl<'a> Rowable<'a> for Match<'a> {
       spans[*position].style = spans[*position].style.add_modifier(Modifier::UNDERLINED);
     }
 
-    Row::new(vec![Cell::from(Spans::from(spans))])
+    vec![Spans::from(spans)]
   }
 }
 
-pub fn sessions(state: &State) -> Vec<Row<'_>> {
+pub fn sessions(state: &State) -> Vec<Vec<Spans<'_>>> {
   state
     .sessions
     .iter()
@@ -171,7 +170,7 @@ pub fn sessions(state: &State) -> Vec<Row<'_>> {
     .collect()
 }
 
-pub fn files(state: &State) -> Vec<Row<'_>> {
+pub fn files(state: &State) -> Vec<Vec<Spans<'_>>> {
   match state.session() {
     None => vec![],
     Some(Session { files, .. }) => files
@@ -248,7 +247,7 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
   rows
 }
 
-pub fn search_matches(state: &State, search: String) -> Vec<Row<'_>> {
+pub fn search_matches<S: AsRef<str>>(state: &State, search: S) -> Vec<Vec<Spans<'_>>> {
   search::sorted(search, state.destinations())
     .into_iter()
     .map(|search_match| search_match.row(false, false))

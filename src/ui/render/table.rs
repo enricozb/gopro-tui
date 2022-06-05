@@ -6,10 +6,18 @@ use tui::{
   widgets::{Block, Borders, Cell as TuiCell, Row, Table as TuiTable},
 };
 
+#[derive(PartialEq, Eq)]
+pub enum Alignment {
+  Left,
+  Right,
+}
+
 #[derive(Default)]
 pub struct Table<'a> {
-  pub title: Option<String>,
   pub rows: Vec<Vec<Spans<'a>>>,
+
+  pub title: Option<String>,
+  pub alignments: Option<Vec<Alignment>>,
 
   pub focused: bool,
 }
@@ -17,6 +25,13 @@ pub struct Table<'a> {
 impl<'a> Table<'a> {
   pub fn new(rows: Vec<Vec<Spans<'a>>>) -> Self {
     Self { rows, ..Self::default() }
+  }
+
+  pub fn alignments<Alignments: Into<Vec<Alignment>>>(self, alignments: Alignments) -> Self {
+    Self {
+      alignments: Some(alignments.into()),
+      ..self
+    }
   }
 
   pub fn title<S: Into<String>>(self, title: S) -> Self {
@@ -40,17 +55,31 @@ impl<'a> Table<'a> {
   }
 
   pub fn widget(self, constraints: &'a [Constraint]) -> TuiTable<'a> {
-    TuiTable::new(
-      self
-        .rows
-        .into_iter()
-        .map(|row| Row::new(row.into_iter().map(TuiCell::from).collect::<Vec<_>>())),
-    )
-    .block(
-      Block::default()
-        .title(Span::raw(self.title.unwrap_or_default()))
-        .borders(Borders::ALL),
-    )
-    .widths(constraints)
+    TuiTable::new(Self::align_rows(self.rows, self.alignments.as_ref(), constraints))
+      .block(
+        Block::default()
+          .title(Span::raw(self.title.unwrap_or_default()))
+          .borders(Borders::ALL),
+      )
+      .widths(constraints)
+  }
+
+  fn align_rows(rows: Vec<Vec<Spans<'a>>>, alignments: Option<&Vec<Alignment>>, constraints: &[Constraint]) -> Vec<Row<'a>> {
+    rows
+      .into_iter()
+      .map(|mut row| {
+        if let Some(alignments) = alignments {
+          for (spans, alignment, constraint) in itertools::izip!(&mut row, alignments, constraints) {
+            if *alignment == Alignment::Right {
+              if let Constraint::Length(width) = constraint {
+                spans.0.insert(0, Span::raw(" ".repeat((*width as usize) - spans.width())));
+              }
+            }
+          }
+        }
+
+        Row::new(row.into_iter().map(TuiCell::from).collect::<Vec<_>>())
+      })
+      .collect()
   }
 }
