@@ -10,6 +10,7 @@ crossterm = "0.23"
 directories = "4.0"
 mpvipc = "1.1.9"
 nom = "7.1.1"
+regex = "1.5.6"
 serde_json = "1.0.59"
 serde = { version = "1.0.136", features = ["derive"] }
 stable-eyre = "0.2"

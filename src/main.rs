@@ -17,6 +17,7 @@ use crate::{
   channel::{EventChannel, ResultChannel},
   error::Result,
   mode::Mode,
+  reader::destinations,
   ui::events,
 };
 
@@ -25,22 +26,20 @@ fn main() -> Result<()> {
 
   let args = Args::parse();
 
-  let (input_dir, mode) = match args.input_dir {
-    Some(dir) => (dir, Mode::Importing),
-    None => (args.output_dir, Mode::Viewing),
-  };
+  let mode = Mode::from(args);
 
-  let cache = SourceCache::from(&input_dir, mode)?;
+  // TODO(enricozb): don't clone the cache; Arc<Mutex<...>> it.
+  let cache = SourceCache::from(&mode)?;
 
   let event_channel = EventChannel::new();
   let result_channel = ResultChannel::new();
 
   events::spawn(&event_channel, &result_channel);
 
-  // TODO(enricozb): don't clone the cache; Arc<Mutex<...>> it.
-  reader::spawn(input_dir, &event_channel, &result_channel, cache.clone());
+  reader::spawn(&mode, &event_channel, &result_channel, cache.clone());
+  destinations::spawn(&mode, &event_channel, &result_channel);
 
-  ui::spawn(event_channel, &result_channel, cache);
+  ui::spawn(mode, event_channel, &result_channel, cache);
   result_channel.poll()??;
 
   Ok(())

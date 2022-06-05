@@ -14,7 +14,7 @@ pub struct Session {
 
 impl Session {
   pub fn new(date: Date, files: Vec<File>) -> Result<Self> {
-    let times: Result<Vec<_>> = files.iter().map(|f| f.time()).collect();
+    let times: Result<Vec<_>> = files.iter().map(File::time).collect();
 
     Ok(Self {
       date,

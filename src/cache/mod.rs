@@ -1,7 +1,7 @@
 mod user;
 mod version;
 
-use std::{collections::BTreeMap, path::Path};
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -27,10 +27,10 @@ pub struct Source {
 }
 
 impl Source {
-  pub fn from(input_dir: &Path, mode: Mode) -> Result<Self> {
-    let serial = match mode {
-      Mode::Importing => Version::from(input_dir)?.camera_serial_number,
-      Mode::Viewing => Local::from(input_dir)?.id.to_string(),
+  pub fn from(mode: &Mode) -> Result<Self> {
+    let serial = match &mode {
+      Mode::Importing { input_dir, .. } => Version::from(input_dir)?.camera_serial_number,
+      Mode::Viewing { input_dir } => Local::from(input_dir)?.id.to_string(),
     };
 
     let mut user_cache = User::from(&dirs::config_json()?)?.sources.remove(&serial).unwrap_or_default();

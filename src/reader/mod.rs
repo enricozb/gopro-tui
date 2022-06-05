@@ -1,12 +1,9 @@
 mod datetime;
+pub mod destinations;
 mod ffmpeg;
 mod gpmf;
 
-use std::{
-  path::{Path, PathBuf},
-  sync::mpsc::Sender,
-  thread,
-};
+use std::{path::Path, sync::mpsc::Sender, thread};
 
 use walkdir::{DirEntry, WalkDir};
 
@@ -15,22 +12,24 @@ use crate::{
   channel::{EventChannel, ResultChannel},
   error::Result,
   events::Event,
+  mode::Mode,
   ui::state::session::File,
   utils,
 };
 
-pub fn spawn(src_dir: PathBuf, event_channel: &EventChannel, result_channel: &ResultChannel, cache: SourceCache) {
+pub fn spawn(mode: &Mode, event_channel: &EventChannel, result_channel: &ResultChannel, cache: SourceCache) {
+  let input_dir = mode.input_dir();
   let event_sender = event_channel.sender();
   let result_sender = result_channel.sender();
 
-  thread::spawn(move || match run(&src_dir, &event_sender, cache) {
+  thread::spawn(move || match run(&input_dir, &event_sender, cache) {
     Ok(_) => (),
     error => result_sender.send(error).unwrap(),
   });
 }
 
-fn run(src_dir: &Path, event_sender: &Sender<Event>, cache: SourceCache) -> Result<()> {
-  for file in WalkDir::new(src_dir.join("DCIM")).into_iter().filter_map(std::result::Result::ok) {
+fn run(input_dir: &Path, event_sender: &Sender<Event>, cache: SourceCache) -> Result<()> {
+  for file in WalkDir::new(input_dir.join("DCIM")).into_iter().filter_map(std::result::Result::ok) {
     if !is_mp4(&file) {
       continue;
     };

@@ -1,4 +1,4 @@
-use std::os::unix::fs::MetadataExt;
+use std::{collections::BTreeSet, os::unix::fs::MetadataExt, path::PathBuf};
 
 use tui::{
   style::{Color, Modifier, Style},
@@ -6,10 +6,14 @@ use tui::{
   widgets::{Cell, Row},
 };
 
-use crate::ui::state::{
-  focus::Focus,
-  session::{File, Session, Status},
-  State,
+use crate::{
+  mode::Mode,
+  ui::state::{
+    destination::Destination,
+    focus::Focus,
+    session::{File, Session, Status},
+    State,
+  },
 };
 
 struct Colors {
@@ -18,6 +22,7 @@ struct Colors {
   size: Color,
   duration: Color,
   path: Color,
+  destination: Color,
   status_import: Color,
   status_ignore: Color,
   status_none: Color,
@@ -26,19 +31,20 @@ struct Colors {
 impl Colors {
   fn new(highlighted: bool) -> Self {
     let mut colors = [
-      Color::Green,  // date
-      Color::Gray,   // count
-      Color::Yellow, // size
-      Color::Green,  // duration
-      Color::Gray,   // path
-      Color::Green,  // status_import
-      Color::Red,    // status_ignore
-      Color::Blue,   // status_ignore
+      Color::Magenta, // date
+      Color::Gray,    // count
+      Color::Yellow,  // size
+      Color::Green,   // duration
+      Color::Gray,    // path
+      Color::Blue,    // destination
+      Color::Green,   // status_import
+      Color::Red,     // status_ignore
+      Color::Blue,    // status_ignore
     ];
 
     if highlighted {
-      for color in colors.iter_mut() {
-        *color = Self::focused_color(*color)
+      for color in &mut colors {
+        *color = Self::focused_color(*color);
       }
     }
 
@@ -48,15 +54,17 @@ impl Colors {
       size: colors[2],
       duration: colors[3],
       path: colors[4],
-      status_import: colors[5],
-      status_ignore: colors[6],
-      status_none: colors[7],
+      destination: colors[5],
+      status_import: colors[6],
+      status_ignore: colors[7],
+      status_none: colors[8],
     }
   }
 
   fn focused_color(color: Color) -> Color {
     match color {
       Color::Red => Color::LightRed,
+      Color::Magenta => Color::LightMagenta,
       Color::Green => Color::LightGreen,
       Color::Gray => Color::White,
       Color::Yellow => Color::LightYellow,
@@ -80,7 +88,8 @@ impl<'a> Rowable<'a> for Session {
 
     Row::new(vec![
       Cell::from(self.date.clone()).style(Style::default().fg(colors.date).add_modifier(modifier)),
-      Cell::from(self.files.len().to_string()).style(Style::default().fg(colors.count).add_modifier(modifier)),
+      Cell::from(human_readable_file_counts(self.files.values(), colors.count, colors.status_import))
+        .style(Style::default().add_modifier(modifier)),
       Cell::from(format!(
         "{:>8}",
         human_readable_size(self.files.values().map(|f| f.metadata.size()).sum::<u64>())
@@ -151,6 +160,74 @@ pub fn files(state: &State) -> Vec<Row<'_>> {
   }
 }
 
+// destinations computes a tree-like vector of rows showing the destination directories.
+pub fn destinations(state: &State) -> Vec<Row<'_>> {
+  struct DestRow<'a> {
+    path: &'a PathBuf,
+    file_name: String,
+    depth: usize,
+    is_last: bool,
+  }
+
+  fn extend_stack<'a>(stack: &mut Vec<DestRow<'a>>, destinations: &'a BTreeSet<Destination>, depth: usize) {
+    let len = destinations.len();
+    stack.extend(
+      destinations
+        .iter()
+        .enumerate()
+        .filter_map(|(i, d)| {
+          if let Some(file_name) = d.abs.file_name().map(|f| f.to_string_lossy().to_string()) {
+            Some(DestRow {
+              path: &d.abs,
+              file_name,
+              depth,
+              is_last: (i + 1) == len,
+            })
+          } else {
+            None
+          }
+        })
+        .rev(),
+    );
+  }
+
+  let output_dir = if let Mode::Importing { output_dir, .. } = &state.mode {
+    output_dir
+  } else {
+    return Vec::new();
+  };
+
+  let colors = Colors::new(false);
+
+  let mut prefix = Vec::new();
+  let mut rows = Vec::new();
+  let mut stack = Vec::new();
+
+  if let Some(destinations) = state.destinations.get(output_dir) {
+    extend_stack(&mut stack, destinations, 0);
+  };
+
+  while !stack.is_empty() {
+    if let Some(dest) = stack.pop() {
+      prefix.truncate(dest.depth);
+
+      let (section_sep, prefix_tail) = if dest.is_last { ("   ", " └─") } else { (" │ ", " ├─") };
+
+      rows.push(Row::new(vec![Cell::from(Spans::from(vec![
+        Span::raw(format!("{}{} ", prefix.join(""), prefix_tail)),
+        Span::styled(dest.file_name, Style::default().fg(colors.destination)),
+      ]))]));
+
+      if let Some(destinations) = state.destinations.get(dest.path) {
+        extend_stack(&mut stack, destinations, dest.depth + 1);
+        prefix.push(section_sep);
+      }
+    }
+  }
+
+  rows
+}
+
 fn size_split(session: &Session) -> (u64, u64) {
   let imported: u64 = session
     .files
@@ -164,6 +241,31 @@ fn size_split(session: &Session) -> (u64, u64) {
   (imported, uncategorized)
 }
 
+fn human_readable_file_counts<'a, I>(files: I, count_color: Color, status_import: Color) -> Spans<'static>
+where
+  I: Iterator<Item = &'a File>,
+{
+  let mut count = 0;
+  let mut imported = 0;
+
+  for f in files {
+    count += 1;
+    if f.status == Some(Status::Import) {
+      imported += 1;
+    }
+  }
+
+  let mut parts = vec![Span::styled(count.to_string(), Style::default().fg(count_color))];
+
+  if imported > 0 {
+    parts.push(Span::raw(" "));
+
+    parts.push(Span::styled(format!("+{}", imported), Style::default().fg(status_import)));
+  };
+
+  Spans::from(parts)
+}
+
 fn human_readable_size_split(imported: u64, uncategorized: u64, imported_color: Color, uncategorized_color: Color) -> Spans<'static> {
   let mut parts = Vec::new();
 
@@ -171,18 +273,18 @@ fn human_readable_size_split(imported: u64, uncategorized: u64, imported_color: 
     parts.push(Span::styled(
       format!("+{}", human_readable_size(imported)),
       Style::default().fg(imported_color),
-    ))
+    ));
   }
 
   if uncategorized > 0 {
     if imported > 0 {
-      parts.push(Span::raw("/"))
+      parts.push(Span::raw("/"));
     }
 
     parts.push(Span::styled(
       format!("~{}", human_readable_size(uncategorized)),
       Style::default().fg(uncategorized_color),
-    ))
+    ));
   }
 
   Spans::from(parts)

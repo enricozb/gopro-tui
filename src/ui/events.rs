@@ -2,7 +2,7 @@ use std::{sync::mpsc::Sender, thread, time::Duration};
 
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 
-use super::state::session::File;
+use super::state::{destination::Destination, session::File};
 use crate::{
   channel::{EventChannel, ResultChannel},
   error::Result,
@@ -11,6 +11,7 @@ use crate::{
 pub enum Event {
   Key { code: KeyCode, modifiers: KeyModifiers },
   File(Box<File>),
+  Destination(Destination),
   Error(String),
   Tick,
 }

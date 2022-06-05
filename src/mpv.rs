@@ -87,9 +87,9 @@ impl Player {
     if let Some(status) = self.process.try_wait()? {
       if !status.success() {
         return Err(err!("mpv exited with exit code {:?}", status.code()));
-      } else {
-        self.process = spawn_mpv_instance(&self.socket)?;
       }
+
+      self.process = spawn_mpv_instance(&self.socket)?;
     };
 
     Ok(Mpv::connect(SOCKET)?)

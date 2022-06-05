@@ -26,6 +26,7 @@ use crate::{
   cache::Source as SourceCache,
   channel::{EventChannel, ResultChannel},
   error::Result,
+  mode::Mode,
 };
 
 pub struct Ui {
@@ -36,11 +37,11 @@ pub struct Ui {
 }
 
 impl Ui {
-  pub fn new(cache: SourceCache, event_channel: EventChannel) -> Result<Self> {
+  pub fn new(mode: Mode, cache: SourceCache, event_channel: EventChannel) -> Result<Self> {
     Ok(Self {
       cache,
       event_channel,
-      state: State::new()?,
+      state: State::new(mode)?,
       terminal: Terminal::new(CrosstermBackend::new(io::stdout()))?,
     })
   }
@@ -91,9 +92,13 @@ impl Ui {
           self.cache.save()?;
         }
 
+        (_, _, Event::Destination(destination)) => {
+          self.state.add_destination(destination);
+        }
+
         (_, _, Event::Error(error)) => self.state.error(error),
 
-        (_, _, Event::Tick) => self.state.sync()?,
+        (_, _, Event::Tick) => self.state.sync(),
 
         _ => (),
       }
@@ -141,12 +146,12 @@ impl Drop for Ui {
   }
 }
 
-pub fn spawn(event_channel: EventChannel, result_channel: &ResultChannel, cache: SourceCache) {
+pub fn spawn(mode: Mode, event_channel: EventChannel, result_channel: &ResultChannel, cache: SourceCache) {
   let result_sender = result_channel.sender();
 
-  thread::spawn(move || result_sender.send(run(cache, event_channel)).unwrap());
+  thread::spawn(move || result_sender.send(run(mode, cache, event_channel)).unwrap());
 }
 
-fn run(cache: SourceCache, event_channel: EventChannel) -> Result<()> {
-  Ui::new(cache, event_channel)?.run()
+fn run(mode: Mode, cache: SourceCache, event_channel: EventChannel) -> Result<()> {
+  Ui::new(mode, cache, event_channel)?.run()
 }

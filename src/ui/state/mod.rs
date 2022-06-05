@@ -1,23 +1,28 @@
+pub mod destination;
 pub mod focus;
 pub mod session;
 
-use std::collections::BTreeMap;
+use std::{
+  collections::{BTreeMap, BTreeSet},
+  path::PathBuf,
+};
 
 use self::{
+  destination::Destination,
   focus::Focus,
   session::{Date, File, Session, Status},
 };
-use crate::{error::Result, mpv::Player};
+use crate::{error::Result, mode::Mode, mpv::Player};
 
 pub struct State {
-  pub src_dir: Option<String>,
-  pub dst_dir: Option<String>,
+  pub mode: Mode,
 
   pub focus: Focus,
   pub input: Option<String>,
   pub error: Option<String>,
 
   pub sessions: BTreeMap<Date, Session>,
+  pub destinations: BTreeMap<PathBuf, BTreeSet<Destination>>,
 
   pub session_idx: usize,
   pub file_idx: usize,
@@ -26,16 +31,16 @@ pub struct State {
 }
 
 impl State {
-  pub fn new() -> Result<Self> {
+  pub fn new(mode: Mode) -> Result<Self> {
     Ok(Self {
-      src_dir: None,
-      dst_dir: None,
+      mode,
 
       focus: Focus::default(),
       input: None,
       error: None,
 
       sessions: BTreeMap::new(),
+      destinations: BTreeMap::new(),
 
       session_idx: 0,
       file_idx: 0,
@@ -85,6 +90,16 @@ impl State {
     };
 
     Ok(())
+  }
+
+  pub fn add_destination(&mut self, destination: Destination) {
+    if let Some(parent) = destination.abs.parent() {
+      if let Some(destinations) = self.destinations.get_mut(parent) {
+        destinations.insert(destination);
+      } else {
+        self.destinations.insert(parent.to_path_buf(), BTreeSet::from([destination]));
+      }
+    }
   }
 
   pub fn toggle_file_import(&mut self) {
@@ -194,7 +209,7 @@ impl State {
   pub fn write_note(&mut self) {
     if let Some(input) = self.input.clone() {
       if let Some(ref mut file) = self.file_mut() {
-        file.note = Some(input)
+        file.note = Some(input);
       }
     };
 
@@ -205,12 +220,12 @@ impl State {
     match self.focus {
       Focus::Files => {
         if self.player.is_playing() {
-          self.player.set_playlist_pos(self.file_idx)
+          self.player.set_playlist_pos(self.file_idx);
         }
       }
       Focus::Sessions => {
         if let Some(session) = self.session().cloned() {
-          self.player.load_session(&session)?
+          self.player.load_session(&session)?;
         }
       }
     };
@@ -218,12 +233,10 @@ impl State {
     Ok(())
   }
 
-  pub fn sync(&mut self) -> Result<()> {
+  pub fn sync(&mut self) {
     if let Some(idx) = self.player.playlist_pos() {
       self.file_idx = idx;
     }
-
-    Ok(())
   }
 }
 

@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
 struct Sections<'a> {
   sessions: Rect,
   files: Rect,
-  outputs: Rect,
+  destinations: Rect,
 
   input: Rect,
   popup: Rect,
@@ -44,7 +44,7 @@ impl<'a> Sections<'a> {
     Self {
       sessions: left[0],
       files: left[1],
-      outputs: layout[1],
+      destinations: layout[1],
 
       input: Sections::input_rect(frame),
       popup: Sections::popup_rect(frame),
@@ -58,7 +58,7 @@ impl<'a> Sections<'a> {
 
     frame.render_stateful_widget(self.sessions(), self.sessions, &mut self.sessions_state());
     frame.render_stateful_widget(self.files(), self.files, &mut self.files_state());
-    frame.render_widget(self.outputs(), self.outputs);
+    frame.render_widget(self.destinations(), self.destinations);
 
     if let Some(error) = &self.state.error {
       frame.render_widget(Clear, self.popup);
@@ -74,16 +74,13 @@ impl<'a> Sections<'a> {
   }
 
   fn sessions(&self) -> Table {
-    let (title, border_style) = border_style(
-      &[Some("Sessions"), self.state.src_dir.as_deref()],
-      self.state.focus == Focus::Sessions,
-    );
+    let (title, border_style) = border_style(&[Some("Sessions")], self.state.focus == Focus::Sessions);
 
     Table::new(rows::sessions(self.state))
       .block(Block::default().title(title).borders(Borders::ALL).border_style(border_style))
       .widths(&[
         Constraint::Length(11),
-        Constraint::Length(3),
+        Constraint::Length(6),
         Constraint::Length(9),
         Constraint::Length(20),
       ])
@@ -103,13 +100,12 @@ impl<'a> Sections<'a> {
       ])
   }
 
-  fn outputs(&self) -> Block {
-    let title = match &self.state.dst_dir {
-      Some(dir) => format!("Outputs - {}", dir),
-      None => "Outputs".to_string(),
-    };
+  fn destinations(&self) -> Table {
+    let title = "Destinations".to_string();
 
-    Block::default().title(title).borders(Borders::ALL)
+    Table::new(rows::destinations(self.state))
+      .block(Block::default().title(title).borders(Borders::ALL))
+      .widths(&[Constraint::Percentage(80), Constraint::Percentage(20)])
   }
 
   fn input(&self, input: String) -> Paragraph {
