@@ -1,36 +1,37 @@
 use std::cmp;
 
 use tui::{
-  layout::Constraint,
+  buffer::Buffer,
+  layout::{Constraint, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
-  widgets::{Block, Borders, Cell as TuiCell, Row, Table as TuiTable},
+  widgets::{Block, Borders, Cell as TuiCell, Row, StatefulWidget, Table as TuiTable, TableState, Widget},
 };
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum Alignment {
   Left,
   Right,
 }
 
+type Rows<'a> = Vec<Vec<Spans<'a>>>;
+
 #[derive(Default)]
 pub struct Table<'a> {
-  pub rows: Vec<Vec<Spans<'a>>>,
-
-  pub title: Option<String>,
-  pub alignments: Option<Vec<Alignment>>,
-
-  pub focused: bool,
+  rows: Rows<'a>,
+  title: Option<String>,
+  alignments: Vec<Alignment>,
+  focused: bool,
 }
 
 impl<'a> Table<'a> {
-  pub fn new(rows: Vec<Vec<Spans<'a>>>) -> Self {
+  pub fn new(rows: Rows<'a>) -> Self {
     Self { rows, ..Self::default() }
   }
 
   pub fn alignments<Alignments: Into<Vec<Alignment>>>(self, alignments: Alignments) -> Self {
     Self {
-      alignments: Some(alignments.into()),
+      alignments: alignments.into(),
       ..self
     }
   }
@@ -46,8 +47,7 @@ impl<'a> Table<'a> {
     }
   }
 
-  // constraints computes the table layout based on the maximum width of each column
-  pub fn constraints(&self) -> Vec<Constraint> {
+  fn constraints(&self) -> Vec<Constraint> {
     self
       .rows
       .iter()
@@ -59,19 +59,6 @@ impl<'a> Table<'a> {
       .collect()
   }
 
-  pub fn widget(self, constraints: &'a [Constraint]) -> TuiTable<'a> {
-    let border_style = self.border_style();
-
-    TuiTable::new(Self::align_rows(self.rows, self.alignments.as_ref(), constraints))
-      .block(
-        Block::default()
-          .title(Span::styled(self.title.unwrap_or_default(), Style::default().fg(Color::Blue)))
-          .border_style(border_style)
-          .borders(Borders::ALL),
-      )
-      .widths(constraints)
-  }
-
   fn border_style(&self) -> Style {
     if self.focused {
       Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)
@@ -80,16 +67,14 @@ impl<'a> Table<'a> {
     }
   }
 
-  fn align_rows(rows: Vec<Vec<Spans<'a>>>, alignments: Option<&Vec<Alignment>>, constraints: &[Constraint]) -> Vec<Row<'a>> {
+  fn aligned_rows(rows: Rows<'a>, alignments: Vec<Alignment>, constraints: &'a [Constraint]) -> Vec<Row<'a>> {
     rows
       .into_iter()
       .map(|mut row| {
-        if let Some(alignments) = alignments {
-          for (spans, alignment, constraint) in itertools::izip!(&mut row, alignments, constraints) {
-            if *alignment == Alignment::Right {
-              if let Constraint::Length(width) = constraint {
-                spans.0.insert(0, Span::raw(" ".repeat((*width as usize) - spans.width())));
-              }
+        for (spans, alignment, constraint) in itertools::izip!(&mut row, &alignments, constraints) {
+          if *alignment == Alignment::Right {
+            if let Constraint::Length(width) = constraint {
+              spans.0.insert(0, Span::raw(" ".repeat((*width as usize) - spans.width())));
             }
           }
         }
@@ -97,5 +82,37 @@ impl<'a> Table<'a> {
         Row::new(row.into_iter().map(TuiCell::from).collect::<Vec<_>>())
       })
       .collect()
+  }
+
+  fn widget(self, constraints: &'a [Constraint]) -> TuiTable<'a> {
+    let title = self.title.clone().unwrap_or_default();
+    let border_style = self.border_style();
+
+    TuiTable::new(Self::aligned_rows(self.rows, self.alignments, &constraints))
+      .block(
+        Block::default()
+          .title(Span::styled(title, Style::default().fg(Color::Blue)))
+          .border_style(border_style)
+          .borders(Borders::ALL),
+      )
+      .widths(&constraints)
+  }
+}
+
+impl<'a> Widget for Table<'a> {
+  fn render(self, area: Rect, buf: &mut Buffer) {
+    let constraints = self.constraints();
+
+    Widget::render(self.widget(&constraints), area, buf);
+  }
+}
+
+impl<'a> StatefulWidget for Table<'a> {
+  type State = TableState;
+
+  fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+    let constraints = self.constraints();
+
+    StatefulWidget::render(self.widget(&constraints), area, buf, state);
   }
 }

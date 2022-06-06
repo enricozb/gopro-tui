@@ -92,33 +92,33 @@ impl<'a> Sections<'a> {
   fn render_sessions(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
     use super::table::Alignment::{Left, Right};
 
-    let table = Table::new(rows::sessions(self.state))
-      .title("Sessions")
-      .focused(self.state.focus == Focus::Sessions)
-      .alignments([Left, Left, Right, Right, Left]);
-    let constraints = table.constraints();
-
-    frame.render_stateful_widget(table.widget(&constraints), self.sessions, &mut self.sessions_state());
+    frame.render_stateful_widget(
+      Table::new(rows::sessions(self.state))
+        .title("Sessions")
+        .focused(self.state.focus == Focus::Sessions)
+        .alignments([Left, Left, Right, Right, Left]),
+      self.sessions,
+      &mut self.sessions_state(),
+    );
   }
 
   fn render_files(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
     use super::table::Alignment::{Left, Right};
 
-    let table = Table::new(rows::files(self.state))
-      .title("Files")
-      .focused(self.state.focus == Focus::Files)
-      .alignments([Left, Left, Right, Right, Left]);
-    let constraints = table.constraints();
-
-    frame.render_stateful_widget(table.widget(&constraints), self.files, &mut self.files_state());
+    frame.render_stateful_widget(
+      Table::new(rows::files(self.state))
+        .title("Files")
+        .focused(self.state.focus == Focus::Files)
+        .alignments([Left, Left, Right, Right, Left]),
+      self.files,
+      &mut self.files_state(),
+    );
   }
 
   fn render_destinations(&self, frame: &mut Frame<CrosstermBackend<Stdout>>) {
     let title = self.state.mode.output_dir().unwrap_or_default().to_string_lossy().to_string();
-    let table = Table::new(rows::destinations(self.state)).title(title);
-    let constraints = table.constraints();
 
-    frame.render_widget(table.widget(&constraints), self.destinations);
+    frame.render_widget(Table::new(rows::destinations(self.state)).title(title), self.destinations);
   }
 
   fn input(&self, input: String) -> Paragraph {
@@ -144,11 +144,8 @@ impl<'a> Sections<'a> {
   }
 
   fn render_search_results<S: AsRef<str>>(&self, input: S, frame: &mut Frame<CrosstermBackend<Stdout>>) {
-    let table = Table::new(rows::search_matches(self.state, input));
-    let constraints = table.constraints();
-
     frame.render_widget(Clear, self.search_results);
-    frame.render_widget(table.widget(&constraints), self.search_results);
+    frame.render_widget(Table::new(rows::search_matches(self.state, input)), self.search_results);
   }
 
   fn popup(&self, error: String) -> Paragraph {

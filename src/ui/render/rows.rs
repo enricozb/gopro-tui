@@ -135,7 +135,7 @@ impl<'a> Rowable<'a> for File {
         Style::default().fg(colors.duration).add_modifier(modifier),
       )),
       Spans::from(Span::styled(
-        self.note.clone().unwrap_or("".to_string()),
+        self.note.clone().unwrap_or_else(|| "".to_string()),
         Style::default().fg(colors.filename).add_modifier(modifier),
       )),
     ]
