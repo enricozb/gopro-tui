@@ -3,10 +3,12 @@ use std::cmp;
 use tui::{
   buffer::Buffer,
   layout::{Constraint, Rect},
-  style::{Color, Modifier, Style},
+  style::{Modifier, Style},
   text::{Span, Spans},
   widgets::{Block, Borders, Cell as TuiCell, Row, StatefulWidget, Table as TuiTable, TableState, Widget},
 };
+
+use crate::ui::colors::Colors;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Alignment {
@@ -59,12 +61,16 @@ impl<'a> Table<'a> {
       .collect()
   }
 
-  fn border_style(&self) -> Style {
-    if self.focused {
-      Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)
+  fn border_style(&self) -> (Style, Style) {
+    let border_style = if self.focused {
+      Style::default().fg(Colors::normal().focused_block).add_modifier(Modifier::BOLD)
     } else {
       Style::default()
-    }
+    };
+
+    let title_style = border_style.fg(Colors::normal().section_title);
+
+    (title_style, border_style)
   }
 
   fn aligned_rows(rows: Rows<'a>, alignments: Vec<Alignment>, constraints: &'a [Constraint]) -> Vec<Row<'a>> {
@@ -86,12 +92,12 @@ impl<'a> Table<'a> {
 
   fn widget(self, constraints: &'a [Constraint]) -> TuiTable<'a> {
     let title = self.title.clone().unwrap_or_default();
-    let border_style = self.border_style();
+    let (title_style, border_style) = self.border_style();
 
     TuiTable::new(Self::aligned_rows(self.rows, self.alignments, &constraints))
       .block(
         Block::default()
-          .title(Span::styled(title, Style::default().fg(Color::Blue)))
+          .title(Span::styled(title, title_style))
           .border_style(border_style)
           .borders(Borders::ALL),
       )

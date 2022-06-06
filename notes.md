@@ -1,5 +1,4 @@
 feature ideas:
-  - add/delete flags to each file and summarize in session window
   - add importing functionality
   - multithread timezone estimation
 

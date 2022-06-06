@@ -1,3 +1,4 @@
+pub mod colors;
 pub mod events;
 mod render;
 pub mod state;

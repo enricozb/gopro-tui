@@ -3,7 +3,7 @@ use std::io::Stdout;
 use tui::{
   backend::CrosstermBackend,
   layout::{Constraint, Direction, Layout, Rect},
-  style::{Color, Style},
+  style::Style,
   text::Span,
   widgets::{Block, Borders, Clear, Paragraph, TableState, Wrap},
   Frame,
@@ -14,6 +14,7 @@ use super::{
   rows,
   table::Table,
 };
+use crate::ui::colors::Colors;
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
   Sections::new(frame.size(), state).render(frame);
@@ -127,9 +128,9 @@ impl<'a> Sections<'a> {
         Block::default()
           .title("Note")
           .borders(Borders::ALL)
-          .border_style(Style::default().fg(Color::Green)),
+          .border_style(Style::default().fg(Colors::normal().input_block)),
       )
-      .style(Style::default().fg(Color::White))
+      .style(Style::default().fg(Colors::normal().input_text))
   }
 
   fn search(&self, input: String) -> Paragraph {
@@ -138,9 +139,9 @@ impl<'a> Sections<'a> {
         Block::default()
           .title("Destination")
           .borders(Borders::ALL)
-          .border_style(Style::default().fg(Color::Green)),
+          .border_style(Style::default().fg(Colors::normal().input_block)),
       )
-      .style(Style::default().fg(Color::White))
+      .style(Style::default().fg(Colors::normal().input_text))
   }
 
   fn render_search_results<S: AsRef<str>>(&self, input: S, frame: &mut Frame<CrosstermBackend<Stdout>>) {
@@ -151,7 +152,7 @@ impl<'a> Sections<'a> {
   fn popup(&self, error: String) -> Paragraph {
     Paragraph::new(error)
       .block(Block::default().title("Error").borders(Borders::ALL))
-      .style(Style::default().fg(Color::Red))
+      .style(Style::default().fg(Colors::normal().error_block))
       .wrap(Wrap { trim: true })
   }
 

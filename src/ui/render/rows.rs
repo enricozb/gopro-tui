@@ -8,71 +8,16 @@ use tui::{
 use super::search::{self, Match};
 use crate::{
   mode::Mode,
-  ui::state::{
-    destination::Destination,
-    focus::Focus,
-    session::{File, Session, Status},
-    State,
+  ui::{
+    colors::Colors,
+    state::{
+      destination::Destination,
+      focus::Focus,
+      session::{File, Session, Status},
+      State,
+    },
   },
 };
-
-struct Colors {
-  date: Color,
-  count: Color,
-  size: Color,
-  duration: Color,
-  filename: Color,
-  destination: Color,
-  status_import: Color,
-  status_ignore: Color,
-  status_none: Color,
-}
-
-impl Colors {
-  fn new(highlighted: bool) -> Self {
-    let mut colors = [
-      Color::Magenta, // date
-      Color::Gray,    // count
-      Color::Yellow,  // size
-      Color::Green,   // duration
-      Color::Gray,    // filename
-      Color::Blue,    // destination
-      Color::Green,   // status_import
-      Color::Red,     // status_ignore
-      Color::Blue,    // status_ignore
-    ];
-
-    if highlighted {
-      for color in &mut colors {
-        *color = Self::focused_color(*color);
-      }
-    }
-
-    Self {
-      date: colors[0],
-      count: colors[1],
-      size: colors[2],
-      duration: colors[3],
-      filename: colors[4],
-      destination: colors[5],
-      status_import: colors[6],
-      status_ignore: colors[7],
-      status_none: colors[8],
-    }
-  }
-
-  fn focused_color(color: Color) -> Color {
-    match color {
-      Color::Red => Color::LightRed,
-      Color::Magenta => Color::LightMagenta,
-      Color::Green => Color::LightGreen,
-      Color::Gray => Color::White,
-      Color::Yellow => Color::LightYellow,
-      Color::Blue => Color::LightBlue,
-      color => color,
-    }
-  }
-}
 
 trait Rowable<'a> {
   fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>>;
@@ -82,7 +27,7 @@ impl<'a> Rowable<'a> for Session {
   fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>> {
     let modifier = if selected { Modifier::BOLD } else { Modifier::empty() };
 
-    let colors = Colors::new(selected && focused);
+    let colors = Colors::focused(selected && focused);
 
     let (import_size, uncategorized_size) = size_split(self);
 
@@ -109,10 +54,10 @@ impl<'a> Rowable<'a> for File {
   fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>> {
     let modifier = if selected { Modifier::BOLD } else { Modifier::empty() };
 
-    let colors = Colors::new(selected && focused);
+    let colors = Colors::focused(selected && focused);
 
     let (status, status_color) = match self.status {
-      None => (" ", Color::White),
+      None => (" ", colors.status_none),
       Some(Status::Import) => ("+", colors.status_import),
       Some(Status::Ignore) => ("-", colors.status_ignore),
     };
@@ -144,7 +89,7 @@ impl<'a> Rowable<'a> for File {
 
 impl<'a> Rowable<'a> for Match<'a> {
   fn row(&self, selected: bool, focused: bool) -> Vec<Spans<'a>> {
-    let colors = Colors::new(selected && focused);
+    let colors = Colors::focused(selected && focused);
 
     let mut spans: Vec<_> = self
       .destination
@@ -216,7 +161,7 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
     return Vec::new();
   };
 
-  let colors = Colors::new(false);
+  let colors = Colors::normal();
 
   let mut prefix = Vec::new();
   let mut rows = Vec::new();
