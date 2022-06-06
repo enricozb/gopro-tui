@@ -2,6 +2,7 @@ use std::cmp;
 
 use tui::{
   layout::Constraint,
+  style::{Color, Modifier, Style},
   text::{Span, Spans},
   widgets::{Block, Borders, Cell as TuiCell, Row, Table as TuiTable},
 };
@@ -34,6 +35,10 @@ impl<'a> Table<'a> {
     }
   }
 
+  pub fn focused(self, focused: bool) -> Self {
+    Self { focused, ..self }
+  }
+
   pub fn title<S: Into<String>>(self, title: S) -> Self {
     Self {
       title: Some(title.into()),
@@ -55,13 +60,24 @@ impl<'a> Table<'a> {
   }
 
   pub fn widget(self, constraints: &'a [Constraint]) -> TuiTable<'a> {
+    let border_style = self.border_style();
+
     TuiTable::new(Self::align_rows(self.rows, self.alignments.as_ref(), constraints))
       .block(
         Block::default()
-          .title(Span::raw(self.title.unwrap_or_default()))
+          .title(Span::styled(self.title.unwrap_or_default(), Style::default().fg(Color::Blue)))
+          .border_style(border_style)
           .borders(Borders::ALL),
       )
       .widths(constraints)
+  }
+
+  fn border_style(&self) -> Style {
+    if self.focused {
+      Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)
+    } else {
+      Style::default()
+    }
   }
 
   fn align_rows(rows: Vec<Vec<Spans<'a>>>, alignments: Option<&Vec<Alignment>>, constraints: &[Constraint]) -> Vec<Row<'a>> {

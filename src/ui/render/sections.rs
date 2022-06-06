@@ -3,13 +3,17 @@ use std::io::Stdout;
 use tui::{
   backend::CrosstermBackend,
   layout::{Constraint, Direction, Layout, Rect},
-  style::{Color, Modifier, Style},
-  text::{Span, Spans},
+  style::{Color, Style},
+  text::Span,
   widgets::{Block, Borders, Clear, Paragraph, TableState, Wrap},
   Frame,
 };
 
-use super::{super::state::State, rows, table::Table};
+use super::{
+  super::state::{focus::Focus, State},
+  rows,
+  table::Table,
+};
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
   Sections::new(frame.size(), state).render(frame);
@@ -90,6 +94,7 @@ impl<'a> Sections<'a> {
 
     let table = Table::new(rows::sessions(self.state))
       .title("Sessions")
+      .focused(self.state.focus == Focus::Sessions)
       .alignments([Left, Left, Right, Right, Left]);
     let constraints = table.constraints();
 
@@ -101,6 +106,7 @@ impl<'a> Sections<'a> {
 
     let table = Table::new(rows::files(self.state))
       .title("Files")
+      .focused(self.state.focus == Focus::Files)
       .alignments([Left, Left, Right, Right, Left]);
     let constraints = table.constraints();
 
@@ -213,21 +219,5 @@ impl<'a> Sections<'a> {
       .direction(Direction::Horizontal)
       .constraints([Constraint::Percentage(20), Constraint::Percentage(60), Constraint::Percentage(20)].as_ref())
       .split(popup_layout[1])[1]
-  }
-}
-
-fn border_style<'a>(title: &[Option<&'a str>], focused: bool) -> (Spans<'a>, Style) {
-  let style = Style::default().fg(Color::Blue);
-  let spans = Spans::from(
-    title
-      .iter()
-      .filter_map(|s| s.map(|s| Span::styled(s, style)))
-      .collect::<Vec<Span<'_>>>(),
-  );
-
-  if focused {
-    (spans, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
-  } else {
-    (spans, Style::default())
   }
 }
