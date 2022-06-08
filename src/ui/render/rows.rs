@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, os::unix::fs::MetadataExt, path::PathBuf};
+use std::{os::unix::fs::MetadataExt, path::PathBuf};
 
 use tui::{
   style::{Color, Modifier, Style},
@@ -11,7 +11,6 @@ use crate::{
   ui::{
     colors::Colors,
     state::{
-      destination::Destination,
       focus::Focus,
       session::{File, Session, Status},
       State,
@@ -43,7 +42,7 @@ impl<'a> Rowable<'a> for Session {
       )),
       human_readable_size_split(import_size, uncategorized_size, colors.status_import, colors.status_none),
       Spans::from(Span::styled(
-        self.destination.as_ref().map_or("".to_string(), |d| d.rel.clone()),
+        format!("-> {}", self.destination.as_ref().map_or("", |d| &d.rel)),
         Style::default().fg(colors.destination).add_modifier(modifier),
       )),
     ]
@@ -130,26 +129,31 @@ pub fn files(state: &State) -> Vec<Vec<Spans<'_>>> {
 // this can't be in an implementation of rowable because state must be tracked while
 // iterating directories to build the tree-like view.
 pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
+  #[derive(Clone, Copy)]
+  enum DestKind {
+    Destination,
+    Session,
+  }
+
   struct DestRow<'a> {
     path: &'a PathBuf,
-    file_name: String,
+    kind: DestKind,
     depth: usize,
     is_last: bool,
   }
 
-  fn extend_stack<'a>(stack: &mut Vec<DestRow<'a>>, destinations: &'a BTreeSet<Destination>, depth: usize) {
-    let len = destinations.len();
+  fn extend_stack<'a>(stack: &mut Vec<DestRow<'a>>, entries: &[(DestKind, &'a PathBuf)], depth: usize) {
+    let length = entries.len();
+
     stack.extend(
-      destinations
+      entries
         .iter()
         .enumerate()
-        .filter_map(|(i, d)| {
-          d.abs.file_name().map(|f| f.to_string_lossy().to_string()).map(|file_name| DestRow {
-            path: &d.abs,
-            file_name,
-            depth,
-            is_last: (i + 1) == len,
-          })
+        .map(|(i, (kind, path))| DestRow {
+          kind: *kind,
+          path,
+          is_last: (i + 1) == length,
+          depth,
         })
         .rev(),
     );
@@ -168,7 +172,11 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
   let mut stack = Vec::new();
 
   if let Some(destinations) = state.destinations.get(output_dir) {
-    extend_stack(&mut stack, destinations, 0);
+    extend_stack(
+      &mut stack,
+      &destinations.iter().map(|d| (DestKind::Destination, &d.abs)).collect::<Vec<_>>(),
+      0,
+    );
   };
 
   while !stack.is_empty() {
@@ -177,14 +185,39 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
 
       let (section_sep, prefix_tail) = if dest.is_last { ("   ", " └─") } else { (" │ ", " ├─") };
 
-      rows.push(vec![Spans::from(vec![
-        Span::raw(format!("{}{} ", prefix.join(""), prefix_tail)),
-        Span::styled(dest.file_name, Style::default().fg(colors.destination)),
-      ])]);
+      let file_name = if let Some(file_name) = dest.path.file_name() {
+        file_name.to_string_lossy().to_string()
+      } else {
+        continue;
+      };
 
-      if let Some(destinations) = state.destinations.get(dest.path) {
-        extend_stack(&mut stack, destinations, dest.depth + 1);
-        prefix.push(section_sep);
+      match dest.kind {
+        DestKind::Destination => {
+          rows.push(vec![Spans::from(vec![
+            Span::raw(format!("{}{} ", prefix.join(""), prefix_tail)),
+            Span::styled(file_name, Style::default().fg(colors.destination)),
+          ])]);
+
+          let mut paths = Vec::new();
+
+          if let Some(sessions) = state.destination_sessions.get(dest.path) {
+            paths.extend(sessions.iter().map(|p| (DestKind::Session, p)))
+          }
+
+          if let Some(destinations) = state.destinations.get(dest.path) {
+            paths.extend(destinations.iter().map(|d| (DestKind::Destination, &d.abs)))
+          }
+
+          extend_stack(&mut stack, &paths, dest.depth + 1);
+          prefix.push(section_sep);
+        }
+
+        DestKind::Session => {
+          rows.push(vec![Spans::from(vec![
+            Span::raw(format!("{}{} ", prefix.join(""), prefix_tail)),
+            Span::styled(file_name, Style::default().fg(colors.date)),
+          ])]);
+        }
       }
     }
   }

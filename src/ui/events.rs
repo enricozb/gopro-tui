@@ -1,4 +1,4 @@
-use std::{sync::mpsc::Sender, thread, time::Duration};
+use std::{path::PathBuf, sync::mpsc::Sender, thread, time::Duration};
 
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 
@@ -12,6 +12,7 @@ pub enum Event {
   Key { code: KeyCode, modifiers: KeyModifiers },
   File(Box<File>),
   Destination(Destination),
+  DestinationSession { path: PathBuf },
   Error(String),
   Tick,
 }

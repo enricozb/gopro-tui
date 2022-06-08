@@ -27,16 +27,26 @@ pub fn spawn(mode: &Mode, event_channel: &EventChannel, result_channel: &ResultC
 fn run(output_dir: &Path, event_sender: &Sender<Event>) -> Result<()> {
   let date_re = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
 
-  for file in WalkDir::new(output_dir)
-    .into_iter()
-    .filter_entry(|e| !e.file_name().to_str().map_or(false, |f| date_re.is_match(f)))
-    .filter_map(std::result::Result::ok)
-  {
-    if file.path() == output_dir {
-      continue;
+  let mut it = WalkDir::new(output_dir).into_iter();
+
+  loop {
+    let entry = match it.next() {
+      Some(Ok(entry)) => entry,
+      Some(Err(_)) => continue,
+      None => break,
+    };
+
+    if let Some(file_name) = entry.file_name().to_str() {
+      if date_re.is_match(file_name) && entry.file_type().is_dir() {
+        event_sender.send(Event::DestinationSession {
+          path: entry.path().to_path_buf(),
+        })?;
+        it.skip_current_dir();
+        continue;
+      }
     }
 
-    event_sender.send(Event::Destination(Destination::new(file.path(), output_dir)?))?;
+    event_sender.send(Event::Destination(Destination::new(entry.path(), output_dir)?))?;
   }
 
   Ok(())

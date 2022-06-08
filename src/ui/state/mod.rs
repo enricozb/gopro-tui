@@ -25,6 +25,7 @@ pub struct State {
 
   pub sessions: BTreeMap<Date, Session>,
   pub destinations: BTreeMap<PathBuf, BTreeSet<Destination>>,
+  pub destination_sessions: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
 
   pub session_idx: usize,
   pub file_idx: usize,
@@ -44,6 +45,7 @@ impl State {
 
       sessions: BTreeMap::new(),
       destinations: BTreeMap::new(),
+      destination_sessions: BTreeMap::new(),
 
       session_idx: 0,
       file_idx: 0,
@@ -106,6 +108,16 @@ impl State {
         destinations.insert(destination);
       } else {
         self.destinations.insert(parent.to_path_buf(), BTreeSet::from([destination]));
+      }
+    }
+  }
+
+  pub fn add_destination_session(&mut self, path: PathBuf) {
+    if let Some(parent) = path.parent() {
+      if let Some(destination_sessions) = self.destination_sessions.get_mut(parent) {
+        destination_sessions.insert(path);
+      } else {
+        self.destination_sessions.insert(parent.to_path_buf(), BTreeSet::from([path]));
       }
     }
   }

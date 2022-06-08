@@ -56,6 +56,9 @@ impl Ui {
     let mut time_at_last_render = SystemTime::UNIX_EPOCH;
 
     loop {
+      // TODO(enricozb): instead of having a render rate like this, have multiple event channels,
+      // such where some should trigger re-renders and others shouldn't. keys & ticks should always
+      // rerender, but adding files and sessions shouldn't.
       if time_at_last_render.elapsed().unwrap() > RENDER_MIN_ELAPSED {
         time_at_last_render = SystemTime::now();
         self.render()?;
@@ -111,6 +114,9 @@ impl Ui {
 
         (_, _, Event::Destination(destination)) => {
           self.state.add_destination(destination);
+        }
+        (_, _, Event::DestinationSession { path }) => {
+          self.state.add_destination_session(path);
         }
 
         (_, _, Event::Error(error)) => self.state.error(error),
