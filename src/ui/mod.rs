@@ -6,6 +6,7 @@ pub mod state;
 use std::{
   io::{self, Stdout},
   thread,
+  time::{Duration, SystemTime},
 };
 
 use crossterm::{
@@ -30,6 +31,8 @@ use crate::{
   mode::Mode,
 };
 
+const RENDER_MIN_ELAPSED: Duration = Duration::from_millis(50);
+
 pub struct Ui {
   cache: SourceCache,
   event_channel: EventChannel,
@@ -50,8 +53,13 @@ impl Ui {
   pub fn run(&mut self) -> Result<()> {
     Self::setup()?;
 
+    let mut time_at_last_render = SystemTime::UNIX_EPOCH;
+
     loop {
-      self.render()?;
+      if time_at_last_render.elapsed().unwrap() > RENDER_MIN_ELAPSED {
+        time_at_last_render = SystemTime::now();
+        self.render()?;
+      }
 
       match (&self.state.focus, &self.state.popup(), self.event_channel.poll()?) {
         (_, Popup::None, Event::Key { code: Char('q'), .. }) => break,
