@@ -133,6 +133,7 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
   enum DestKind {
     Destination,
     Session,
+    NewSession,
   }
 
   struct DestRow<'a> {
@@ -170,6 +171,8 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
   let mut prefix = Vec::new();
   let mut rows = Vec::new();
   let mut stack = Vec::new();
+  let sessions_by_destination = state.new_destination_sessions();
+  let selected_session = state.session().map_or_else(|| "".to_string(), |s| s.date.clone());
 
   if let Some(destinations) = state.destinations.get(output_dir) {
     extend_stack(
@@ -204,6 +207,10 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
             paths.extend(sessions.iter().map(|p| (DestKind::Session, p)));
           }
 
+          if let Some(new_sessions) = sessions_by_destination.get(dest.path) {
+            paths.extend(new_sessions.iter().map(|p| (DestKind::NewSession, p)));
+          };
+
           if let Some(destinations) = state.destinations.get(dest.path) {
             paths.extend(destinations.iter().map(|d| (DestKind::Destination, &d.abs)));
           }
@@ -212,10 +219,16 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
           prefix.push(section_sep);
         }
 
-        DestKind::Session => {
+        DestKind::Session | DestKind::NewSession => {
+          let session_color = if let DestKind::Session = dest.kind {
+            Colors::focused(selected_session == file_name).date
+          } else {
+            Colors::focused(selected_session == file_name).status_import
+          };
+
           rows.push(vec![Spans::from(vec![
             Span::raw(format!("{}{} ", prefix.join(""), prefix_tail)),
-            Span::styled(file_name, Style::default().fg(colors.date)),
+            Span::styled(file_name, Style::default().fg(session_color)),
           ])]);
         }
       }

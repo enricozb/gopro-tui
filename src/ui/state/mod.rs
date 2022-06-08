@@ -80,6 +80,28 @@ impl State {
     self.destinations.values().flat_map(BTreeSet::iter)
   }
 
+  pub fn new_destination_sessions(&self) -> BTreeMap<PathBuf, BTreeSet<PathBuf>> {
+    let mut destination_sessions = BTreeMap::<PathBuf, BTreeSet<PathBuf>>::new();
+
+    for session in self.sessions.values() {
+      let destination_path = if let Some(destination) = &session.destination {
+        &destination.abs
+      } else {
+        continue;
+      };
+
+      let session_destination_path = destination_path.join(session.date.clone());
+
+      if let Some(sessions) = destination_sessions.get_mut(destination_path) {
+        sessions.insert(session_destination_path);
+      } else {
+        destination_sessions.insert(destination_path.clone(), BTreeSet::from([session_destination_path]));
+      }
+    }
+
+    destination_sessions
+  }
+
   pub fn popup(&self) -> Popup {
     match (&self.input, &self.search, &self.error) {
       (Some(_), _, _) => Popup::Input,
