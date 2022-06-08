@@ -36,6 +36,10 @@ fn run(output_dir: &Path, event_sender: &Sender<Event>) -> Result<()> {
       None => break,
     };
 
+    if entry.path() == output_dir {
+      continue;
+    }
+
     if let Some(file_name) = entry.file_name().to_str() {
       if date_re.is_match(file_name) && entry.file_type().is_dir() {
         event_sender.send(Event::DestinationSession {

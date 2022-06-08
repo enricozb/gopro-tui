@@ -42,7 +42,7 @@ impl<'a> Rowable<'a> for Session {
       )),
       human_readable_size_split(import_size, uncategorized_size, colors.status_import, colors.status_none),
       Spans::from(Span::styled(
-        format!("-> {}", self.destination.as_ref().map_or("", |d| &d.rel)),
+        self.destination.as_ref().map_or("".to_string(), |d| format!("-> {}", &d.rel)),
         Style::default().fg(colors.destination).add_modifier(modifier),
       )),
     ]
