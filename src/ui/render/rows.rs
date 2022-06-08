@@ -201,11 +201,11 @@ pub fn destinations(state: &State) -> Vec<Vec<Spans<'_>>> {
           let mut paths = Vec::new();
 
           if let Some(sessions) = state.destination_sessions.get(dest.path) {
-            paths.extend(sessions.iter().map(|p| (DestKind::Session, p)))
+            paths.extend(sessions.iter().map(|p| (DestKind::Session, p)));
           }
 
           if let Some(destinations) = state.destinations.get(dest.path) {
-            paths.extend(destinations.iter().map(|d| (DestKind::Destination, &d.abs)))
+            paths.extend(destinations.iter().map(|d| (DestKind::Destination, &d.abs)));
           }
 
           extend_stack(&mut stack, &paths, dest.depth + 1);

@@ -73,11 +73,11 @@ impl<'a> Table<'a> {
     (title_style, border_style)
   }
 
-  fn aligned_rows(rows: Rows<'a>, alignments: Vec<Alignment>, constraints: &'a [Constraint]) -> Vec<Row<'a>> {
+  fn aligned_rows(rows: Rows<'a>, alignments: &[Alignment], constraints: &'a [Constraint]) -> Vec<Row<'a>> {
     rows
       .into_iter()
       .map(|mut row| {
-        for (spans, alignment, constraint) in itertools::izip!(&mut row, &alignments, constraints) {
+        for (spans, alignment, constraint) in itertools::izip!(&mut row, alignments.iter(), constraints) {
           if *alignment == Alignment::Right {
             if let Constraint::Length(width) = constraint {
               spans.0.insert(0, Span::raw(" ".repeat((*width as usize) - spans.width())));
@@ -94,14 +94,14 @@ impl<'a> Table<'a> {
     let title = self.title.clone().unwrap_or_default();
     let (title_style, border_style) = self.border_style();
 
-    TuiTable::new(Self::aligned_rows(self.rows, self.alignments, &constraints))
+    TuiTable::new(Self::aligned_rows(self.rows, &self.alignments, constraints))
       .block(
         Block::default()
           .title(Span::styled(title, title_style))
           .border_style(border_style)
           .borders(Borders::ALL),
       )
-      .widths(&constraints)
+      .widths(constraints)
   }
 }
 
