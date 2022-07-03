@@ -22,13 +22,13 @@ pub fn spawn(mode: &Mode, event_channel: &EventChannel, result_channel: &ResultC
   let event_sender = event_channel.sender();
   let result_sender = result_channel.sender();
 
-  thread::spawn(move || match run(&input_dir, &event_sender, cache) {
+  thread::spawn(move || match run(&input_dir, &event_sender, &cache) {
     Ok(_) => (),
     error => result_sender.send(error).unwrap(),
   });
 }
 
-fn run(input_dir: &Path, event_sender: &Sender<Event>, cache: SourceCache) -> Result<()> {
+fn run(input_dir: &Path, event_sender: &Sender<Event>, cache: &SourceCache) -> Result<()> {
   for file in WalkDir::new(input_dir.join("DCIM")).into_iter().filter_map(std::result::Result::ok) {
     if !is_mp4(&file) {
       continue;

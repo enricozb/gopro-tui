@@ -43,10 +43,10 @@ pub struct Ui {
 impl Ui {
   pub fn new(mode: Mode, cache: SourceCache, event_channel: EventChannel) -> Result<Self> {
     Ok(Self {
+      state: State::new(mode, event_channel.sender())?,
+      terminal: Terminal::new(CrosstermBackend::new(io::stdout()))?,
       cache,
       event_channel,
-      state: State::new(mode)?,
-      terminal: Terminal::new(CrosstermBackend::new(io::stdout()))?,
     })
   }
 
@@ -72,6 +72,7 @@ impl Ui {
         (_, Popup::None, Event::Key { code: Char('h' | 'l'), .. }) => self.state.toggle_focus(),
 
         (Focus::Sessions, Popup::None, Event::Key { code: Char('n'), .. }) => self.state.search(),
+        (Focus::Sessions, Popup::None, Event::Key { code: Char('I'), .. }) => self.state.import(),
 
         (Focus::Files, Popup::None, Event::Key { code: Char('a'), .. }) => {
           self.state.toggle_file_import();

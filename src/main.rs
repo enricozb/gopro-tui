@@ -8,6 +8,7 @@ mod mpv;
 mod reader;
 mod ui;
 mod utils;
+mod writer;
 
 use clap::Parser;
 

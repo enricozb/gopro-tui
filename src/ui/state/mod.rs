@@ -1,19 +1,22 @@
 pub mod destination;
 pub mod focus;
+pub mod progress;
 pub mod session;
 
 use std::{
   collections::{BTreeMap, BTreeSet},
   path::PathBuf,
+  sync::mpsc::Sender,
 };
 
 use self::{
   destination::Destination,
   focus::Focus,
+  progress::Progress,
   session::{Date, File, Session, Status},
 };
-use super::render::search;
-use crate::{error::Result, mode::Mode, mpv::Player};
+use super::{events::Event, render::search};
+use crate::{error::Result, mode::Mode, mpv::Player, writer::Writer};
 
 pub struct State {
   pub mode: Mode,
@@ -22,6 +25,7 @@ pub struct State {
   pub input: Option<String>,
   pub search: Option<String>,
   pub error: Option<String>,
+  pub progress: Option<Progress>,
 
   pub sessions: BTreeMap<Date, Session>,
   pub destinations: BTreeMap<PathBuf, BTreeSet<Destination>>,
@@ -31,10 +35,11 @@ pub struct State {
   pub file_idx: usize,
 
   pub player: Player,
+  pub writer: Writer,
 }
 
 impl State {
-  pub fn new(mode: Mode) -> Result<Self> {
+  pub fn new(mode: Mode, event_sender: Sender<Event>) -> Result<Self> {
     Ok(Self {
       mode,
 
@@ -42,6 +47,7 @@ impl State {
       input: None,
       search: None,
       error: None,
+      progress: None,
 
       sessions: BTreeMap::new(),
       destinations: BTreeMap::new(),
@@ -51,6 +57,7 @@ impl State {
       file_idx: 0,
 
       player: Player::new()?,
+      writer: Writer::new(event_sender),
     })
   }
 
@@ -103,10 +110,11 @@ impl State {
   }
 
   pub fn popup(&self) -> Popup {
-    match (&self.input, &self.search, &self.error) {
-      (Some(_), _, _) => Popup::Input,
-      (_, Some(_), _) => Popup::Search,
-      (_, _, Some(_)) => Popup::Error,
+    match (&self.input, &self.search, &self.error, &self.progress) {
+      (Some(_), _, _, _) => Popup::Input,
+      (_, Some(_), _, _) => Popup::Search,
+      (_, _, Some(_), _) => Popup::Error,
+      (_, _, _, Some(_)) => Popup::Progress,
       _ => Popup::None,
     }
   }
@@ -184,6 +192,11 @@ impl State {
 
   pub fn search(&mut self) {
     self.search = Some("".to_string());
+  }
+
+  pub fn import(&mut self) {
+    let progress = self.writer.spawn(self.sessions.clone().into_values().collect());
+    self.progress = Some(progress);
   }
 
   pub fn search_char(&mut self, c: char) {
@@ -316,6 +329,12 @@ impl State {
     if let Some(idx) = self.player.playlist_pos() {
       self.file_idx = idx;
     }
+
+    if let Some(progress) = &self.progress {
+      if progress.bare().unwrap().done {
+        self.progress = None;
+      }
+    }
   }
 }
 
@@ -324,6 +343,7 @@ pub enum Popup {
   Input,
   Search,
   Error,
+  Progress,
 }
 
 fn clamp(min: usize, x: usize, max: usize) -> usize {

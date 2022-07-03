@@ -60,4 +60,6 @@ colors! {
  input_text: Color::White,
 
  error_block: Color::Red,
+
+ progress: Color::Green,
 }

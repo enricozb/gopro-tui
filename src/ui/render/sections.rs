@@ -5,7 +5,7 @@ use tui::{
   layout::{Constraint, Direction, Layout, Rect},
   style::Style,
   text::Span,
-  widgets::{Block, Borders, Clear, Paragraph, TableState, Wrap},
+  widgets::{Block, Borders, Clear, Gauge, Paragraph, TableState, Wrap},
   Frame,
 };
 
@@ -14,7 +14,7 @@ use super::{
   rows,
   table::Table,
 };
-use crate::ui::colors::Colors;
+use crate::ui::{colors::Colors, state::progress::Bare as BareProgress};
 
 pub fn render(frame: &mut Frame<CrosstermBackend<Stdout>>, state: &State) {
   Sections::new(frame.size(), state).render(frame);
@@ -29,6 +29,7 @@ struct Sections<'a> {
   search: Rect,
   search_results: Rect,
   popup: Rect,
+  progress: Rect,
 
   state: &'a State,
 }
@@ -52,10 +53,11 @@ impl<'a> Sections<'a> {
       files: left[1],
       destinations: layout[1],
 
-      input: Sections::input_rect(frame),
+      input: Sections::centered_small(frame),
       search,
       search_results,
-      popup: Sections::popup_rect(frame),
+      popup: Sections::centered_large(frame),
+      progress: Sections::centered_small(frame),
 
       state,
     }
@@ -71,22 +73,25 @@ impl<'a> Sections<'a> {
     if let Some(error) = &self.state.error {
       frame.render_widget(Clear, self.popup);
       frame.render_widget(self.popup(error.clone()), self.popup);
-    }
-
-    if let Some(input) = &self.state.input {
+    } else if let Some(input) = &self.state.input {
       frame.render_widget(Clear, self.input);
       frame.render_widget(self.input(input.clone()), self.input);
 
       frame.set_cursor(self.input.x + input.chars().count() as u16 + 1, self.input.y + 1);
-    }
-
-    if let Some(search) = &self.state.search {
+    } else if let Some(search) = &self.state.search {
       frame.render_widget(Clear, self.search);
       frame.render_widget(self.search(search.clone()), self.search);
 
       self.render_search_results(search, frame);
 
       frame.set_cursor(self.search.x + search.chars().count() as u16 + 1, self.search.y + 1);
+    } else if let Some(progress) = &self.state.progress {
+      if let Ok(progress) = progress.bare() {
+        if !progress.done {
+          frame.render_widget(Clear, self.progress);
+          frame.render_widget(self.progress(&progress), self.progress);
+        }
+      }
     }
   }
 
@@ -149,6 +154,18 @@ impl<'a> Sections<'a> {
     frame.render_widget(Table::new(rows::search_matches(self.state, input)), self.search_results);
   }
 
+  fn progress(&self, progress: &BareProgress) -> Gauge {
+    Gauge::default()
+      .block(
+        Block::default()
+          .title(format!("Importing File {} of {}", progress.file_idx + 1, progress.file_total))
+          .borders(Borders::ALL)
+          .border_style(Style::default().fg(Colors::normal().input_block)),
+      )
+      .gauge_style(Style::default().fg(Colors::normal().progress))
+      .percent((progress.file_idx * 100 / progress.file_total) as u16)
+  }
+
   fn popup(&self, error: String) -> Paragraph {
     Paragraph::new(error)
       .block(Block::default().title("Error").borders(Borders::ALL))
@@ -170,7 +187,7 @@ impl<'a> Sections<'a> {
     files_state
   }
 
-  fn input_rect(frame: Rect) -> Rect {
+  fn centered_small(frame: Rect) -> Rect {
     let (width, height) = (67, 3);
 
     Rect {
@@ -207,7 +224,7 @@ impl<'a> Sections<'a> {
     (search, results)
   }
 
-  fn popup_rect(frame: Rect) -> Rect {
+  fn centered_large(frame: Rect) -> Rect {
     let popup_layout = Layout::default()
       .direction(Direction::Vertical)
       .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)].as_ref())
