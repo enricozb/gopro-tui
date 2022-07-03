@@ -41,12 +41,13 @@ fn run(input_dir: &Path, event_sender: &Sender<Event>, cache: SourceCache) -> Re
       (file.date, file.seconds, file.note, file.status)
     } else {
       let ffprobe_info = ffmpeg::ffprobe(path)?;
-      (
-        datetime::approximate(path, &ffprobe_info)?.naive_local().date().to_string(),
-        ffprobe_info.seconds,
-        None,
-        None,
-      )
+      let date = if let Ok(datetime) = datetime::approximate(path, &ffprobe_info) {
+        datetime.naive_local().date().to_string()
+      } else {
+        "?".to_string()
+      };
+
+      (date, ffprobe_info.seconds, None, None)
     };
 
     event_sender.send(Event::File(Box::new(File {
