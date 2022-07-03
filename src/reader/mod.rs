@@ -38,6 +38,10 @@ fn run(input_dir: &Path, event_sender: &Sender<Event>, cache: &SourceCache) -> R
     let file_name = utils::file_name(path)?;
 
     let (date, seconds, note, status) = if let Some(file) = cache.get(&file_name) {
+      if file.imported {
+        continue;
+      }
+
       (file.date, file.seconds, file.note, file.status)
     } else {
       let ffprobe_info = ffmpeg::ffprobe(path)?;

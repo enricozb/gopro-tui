@@ -1,4 +1,4 @@
-use std::{sync::mpsc::Sender, thread, time::Duration};
+use std::{fs, sync::mpsc::Sender, thread};
 
 use crate::{
   error::Result,
@@ -65,17 +65,25 @@ struct FileToImport {
   session_date: Date,
 }
 
+impl FileToImport {
+  pub fn import(&self) -> Result<()> {
+    if let Some(base) = &self.file.path.file_name() {
+      let destination_dir = self.destination.abs.join(self.session_date.clone());
+      if !destination_dir.exists() {
+        fs::create_dir(&destination_dir)?;
+      };
+
+      fs::copy(&self.file.path, &destination_dir.join(base))?;
+    }
+
+    Ok(())
+  }
+}
+
 fn run(mut progress: Progress, files: Vec<FileToImport>) -> Result<()> {
-  for (file_idx, import) in files.into_iter().enumerate() {
+  for (file_idx, entry) in files.into_iter().enumerate() {
     progress.set_file_idx(file_idx)?;
-
-    eprintln!(
-      "sending {:?} -> {:?}",
-      import.file.path,
-      import.destination.abs.join(import.session_date)
-    );
-
-    thread::sleep(Duration::from_millis(100));
+    entry.import()?;
   }
 
   progress.set_done()?;

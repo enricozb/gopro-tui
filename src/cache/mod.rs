@@ -56,6 +56,8 @@ impl Source {
         seconds: file.seconds,
         note: file.note.clone(),
         status: file.status.clone(),
+
+        imported: false,
       },
     );
 
@@ -85,4 +87,6 @@ pub struct File {
   pub seconds: f64,
   pub note: Option<String>,
   pub status: Option<UiFileStatus>,
+
+  pub imported: bool,
 }
